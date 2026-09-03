@@ -90,7 +90,7 @@ opencli <adapter> <command> [args] [options] -f json
 | 适配器 | 平台 | 登录状态 | 关键参数/注意事项 | 经验文件 |
 |---|---|---|---|---|
 | `xiaohongshu` | 小红书 | ✅ 已登录 | note/comments/download 均需完整签名 URL；图文笔记正文只有标签，需 download 图片后 Read | [adapter-xiaohongshu.md](references/adapter-xiaohongshu.md) |
-| `zhihu` | 知乎 | ✅ 已登录 | 深度长文质量高，answer-detail 可获全文 | [verified-platforms.md](references/verified-platforms.md) |
+| `zhihu` | 知乎 | ✅ 已登录 | 深度长文质量高，answer-detail 可获全文；反爬比小红书宽松 | [adapter-zhihu.md](references/adapter-zhihu.md) |
 | `juejin` | 掘金 | ✅ 可用（无需登录） | 只有 hot/recommend，中文技术教程 | [verified-platforms.md](references/verified-platforms.md) |
 | `github` | GitHub | ✅ 已登录 | 适配器只有 whoami；发现项目用 `github-trending` | [verified-platforms.md](references/verified-platforms.md) |
 | `reddit` | Reddit | ✅ 已登录 | AI 编程/找工质量极高，推荐 r/LocalLLaMA 等子版 | [verified-platforms.md](references/verified-platforms.md) |
@@ -141,6 +141,14 @@ opencli <adapter> <command> [args] [options] -f json
 4. 命令无响应/卡住 → 检查 daemon 状态，必要时重启
 5. 输出格式异常 → 确认加了 `-f json`，部分适配器默认输出非标准格式
 
+## 自迭代与经验沉淀
+
+> skill 的价值在于经验持续沉淀。每次任务中遇到的踩坑、平台适配经验、工作流方法论、工具链技巧，都应按分类归档到 references/ 中。
+>
+> 完整的自迭代方法论见 [EVOLUTION.md](EVOLUTION.md)：什么该记录、记录到哪里、怎么记录、何时更新 SKILL.md、自迭代检查清单、维护原则。
+>
+> 快速规则：新适配器 → `adapter-<name>.md`；通用踩坑 → `pitfalls.md`；调研方法论 → `research-sop.md`；脚本/工具链模式 → `research-scripts.md`；反爬 → `anti-bot-notes.md`；本机专属 → `LOCAL.md`（不公开）。
+
 ## 进化日志
 
 新适配器的验证记录追加在 [references/pitfalls.md](references/pitfalls.md) 末尾。
@@ -158,6 +166,14 @@ opencli <adapter> <command> [args] [options] -f json
 - ✅ 制定参数化脚本设计规范（2个核心脚本、7条设计原则、平台字段映射）
 - ✅ 创建 `references/research-scripts.md`，核心判断：方法论价值高，代码复用价值低；不建议原封不动塞硬编码脚本
 - ✅ SKILL.md "可复用调研工作流"章节追加 research-scripts.md 引用
+
+### 2026-09-03 舆情/风评调研专项经验沉淀
+- ✅ AI 办公三产品（豆包/WorkBuddy/千问）真实风评调研实战：小红书 13 篇 + 知乎 2 篇 + 通用搜索 8 篇
+- ✅ 新建 `references/adapter-zhihu.md`：zhihu 适配器首次实战经验（search/answer-detail 字段、answer ID 提取、反爬评估、与小红书互补关系）
+- ✅ 更新 `references/adapter-xiaohongshu.md`：新增"舆情/风评调研场景经验"章节（负面词关键词策略、高赞筛选、评论区挖掘、反爬节奏验证：note/comments 远低于 search）
+- ✅ 更新 `references/research-sop.md`：新增"六、舆情/风评调研专项 SOP"（与普通调研的 7 维区别、8 步标准流程、平台分工与反爬节奏、信源 5 级分级、正负向归类方法、完整实战案例）
+- ✅ SKILL.md 速查表：zhihu 适配器经验文件从 verified-platforms.md 改为 adapter-zhihu.md
+- 关键发现：负面词命中率比中性词高 3-5 倍；小红书 note/comments 可 5-10 秒连续调用（search 需 30 秒）；知乎 answer-detail 一次拿完整 Markdown 正文效率最高；评论区"我也是"+替代方案是风评调研金矿
 
 ### 2026-09-01 小红书图文笔记处理 SOP 与调研效率优化
 - ✅ 滨寿司调研实战：3 组关键词 → 精读 7 篇正文 + 2 篇图片红黑榜（10 张图）+ 2 篇评论区 → 产出 47 款菜品四档分级
