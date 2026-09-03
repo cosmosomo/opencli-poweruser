@@ -1,0 +1,23 @@
+# 本机专属文件（不公开）
+LOCAL.md
+
+# 敏感凭证
+cookie*.txt
+cookies*.txt
+*.cookie
+.env
+.env.*
+
+# 原始数据（可能包含登录态/个人信息）
+raw-data/
+*.zip
+
+# 系统/编辑器
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# Node（如果有）
+node_modules/
