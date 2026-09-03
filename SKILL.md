@@ -13,6 +13,20 @@ description: >-
 通过本机全局安装的 OpenCLI 调用各类网站/桌面应用适配器。核心价值：**已验证的反爬策略、
 必加参数、踩坑经验都沉淀在 references/ 中，调用前查阅对应文件即可避免重复踩坑。**
 
+## 本 skill 的定位与独特价值
+
+> **使用者视角，不是作者视角。** 官方 `opencli-adapter-author` skill 教你怎么为新站点写适配器（12 步 Runbook + 6 种 Strategy 契约模型）；本 skill 教你怎么用已有适配器做**跨平台调研、数据采集、工作流编排**。
+>
+> 我们的独特优势：
+> - **跨平台调研方法论**：8 步 SOP、关键词矩阵、平台适配策略（官方没有）
+> - **8 平台已验证经验**：登录态、命令清单、高价值子版/节点、踩坑点（官方假设你已熟悉）
+> - **环境问题实战**：stale page identity、daemon 管理、多 profile、cookie 导出（官方只教写适配器）
+> - **反爬深度研究**：BOSS 直聘反爬根因、CDP 特征、8 种 DevTools 探测器（官方没有）
+> - **跨工具串联**：OpenCLI + bili2rag + yt-dlp + faster-whisper ASR 工作流（官方只教 OpenCLI 内部）
+> - **数据质量验证**：11 种静默失败识别、肉眼比对、单位/量级检查（官方只教写适配器时的 verify）
+>
+> 当需要为全新站点写适配器时，参考官方 `opencli-adapter-author` skill（npm 包内 `skills/opencli-adapter-author/`）。
+
 ## 安装与初始配置
 
 > 新用户首次使用本 skill 前，必须先完成 OpenCLI 安装、浏览器扩展配置和网站登录。
@@ -122,16 +136,63 @@ opencli <adapter> <command> [args] [options] -f json
 >
 > 来源：BOSS 直聘反爬 4 轮调研（CSDN/腾讯云/掘金/知乎/V2EX/影刀/GitHub/抖音）+ 小红书限流实测（2026-08-28）。
 
-## 探索新适配器（可进化机制）
+## 探索新站点与新适配器（可进化机制）
 
-当用户需求涉及未在速查表中的网站时：
+> 完整的新站点探索流程见 [references/new-site-exploration.md](references/new-site-exploration.md)：`opencli browser analyze` 一步诊断、5 种 Pattern 分类、6 种 Strategy 稳定性判断、6 步探索流程。
+>
+> 数据质量验证见 [references/data-quality-checklist.md](references/data-quality-checklist.md)：11 种静默失败识别、5 步验证法、不同平台特殊检查点。
+>
+> 经验记录规范见 [references/site-memory-guide.md](references/site-memory-guide.md)：记录什么、记录到哪里、站点记忆模板、记忆维护。
+
+当用户需求涉及未在速查表中的网站时，按以下流程：
+
+### Step 1: 一步诊断（不要跳过）
+
+```bash
+opencli browser <session> analyze <url>
+```
+
+`analyze` 一步返回：站点 Pattern（A/B/C/D/E）、反爬厂商检测、最近适配器匹配、`api_candidates`（含 `verdict=likely_data/noise/blocked`）、官方建议的下一步。直接按 `recommended_next_step` 走。
+
+### Step 2: 查找已有适配器
 
 1. 运行 `opencli --help` 查找适配器名称（支持模糊匹配）
-2. 运行 `opencli <adapter> --help` 查看支持的命令和参数
-3. 先用最轻量的只读命令探活（如 `whoami` 或 `search --limit 1`）
+2. 看 `analyze` 输出的 `nearest_adapter`：有没有最像的可以直接用或参考
+3. 运行 `opencli <adapter> --help` 查看支持的命令和参数
+
+### Step 3: 探活验证
+
+1. 先用最轻量的只读命令探活（如 `whoami` 或 `search --limit 1`）
+2. 检查登录态：需要登录的平台确认 `whoami` 返回 `logged_in: true`
+3. 检查反爬：频繁调用是否触发限流/验证码
 4. 若遇到错误，查阅 [references/pitfalls.md](references/pitfalls.md) 看是否有已知解决方案
-5. **验证成功后，将经验追加到 references/ 中**：新建 `adapter-<name>.md`，记录必加参数、
-   反爬策略、可用命令清单、踩坑点。这就是 skill 的进化方式——每个新适配器的经验都被沉淀。
+
+### Step 4: 数据质量验证（关键）
+
+命令能跑通 ≠ 数据正确。按 [references/data-quality-checklist.md](references/data-quality-checklist.md) 验证：
+- 非空检查 → 肉眼比对（抽 1-3 条和网页实际值对比）→ 单位/量级检查 → 字段语义检查 → 编码/URL 检查
+- 11 种静默失败：字段污染、语义分歧、单位混淆、等不够就抓、`|| 0` 兜底、登录态漂移、反爬限流、HTML 实体、URL 不完整、分页不生效、字段缺失
+
+### Step 5: 判断是否需要写新适配器
+
+| 情况 | 解决方案 |
+|---|---|
+| 有现成适配器 | 直接用，记录经验 |
+| 站点有公开 API（无需登录） | 直接用 `curl`/Python `requests`，不需要适配器 |
+| 只需要一次性数据 | 用 `opencli browser` 手动操作（open/eval/extract） |
+| 需要长期反复采集 | 参考官方 `opencli-adapter-author` skill 写适配器 |
+
+### Step 6: 记录经验（skill 进化）
+
+验证成功后，按 [references/site-memory-guide.md](references/site-memory-guide.md) 记录：
+- 新建 `references/adapter-<name>.md`：必加参数、反爬策略、可用命令清单、踩坑点、输出字段
+- 更新 `references/verified-platforms.md`：登录状态、可用命令
+- 更新本文件速查表：新增一行
+- 通用踩坑追加到 `references/pitfalls.md`
+- 反爬特征追加到 `references/anti-bot-notes.md`
+- 本机专属信息（profile、目录、工具版本）更新 `LOCAL.md`（不公开）
+
+**这就是 skill 的进化方式**——每个新站点的探索经验都被结构化沉淀，下次使用时从 30 分钟变成 5 分钟。
 
 ## 遇到问题
 
@@ -147,7 +208,7 @@ opencli <adapter> <command> [args] [options] -f json
 >
 > 完整的自迭代方法论见 [EVOLUTION.md](EVOLUTION.md)：什么该记录、记录到哪里、怎么记录、何时更新 SKILL.md、自迭代检查清单、维护原则。
 >
-> 快速规则：新适配器 → `adapter-<name>.md`；通用踩坑 → `pitfalls.md`；调研方法论 → `research-sop.md`；脚本/工具链模式 → `research-scripts.md`；反爬 → `anti-bot-notes.md`；本机专属 → `LOCAL.md`（不公开）。
+> 快速规则：新适配器 → `adapter-<name>.md`；通用踩坑 → `pitfalls.md`；调研方法论 → `research-sop.md`；脚本/工具链模式 → `research-scripts.md`；反爬 → `anti-bot-notes.md`；新站点探索 → `new-site-exploration.md`；数据质量 → `data-quality-checklist.md`；站点记忆规范 → `site-memory-guide.md`；本机专属 → `LOCAL.md`（不公开）。
 
 ## 进化日志
 
@@ -184,3 +245,12 @@ opencli <adapter> <command> [args] [options] -f json
 - ✅ 沉淀调研工作流优化（关键词矩阵、先筛选再精读、交叉验证定置信度、复用原生四档分类）
 - ✅ 更新 `references/adapter-xiaohongshu.md`：新增"命令参数补遗""图片型笔记处理 SOP""评论区读取策略""调研工作流优化""本次调研效率数据"5 个章节
 - ✅ 更新 SKILL.md 速查表：小红书关键参数从"`note` 需完整签名 URL"更新为"note/comments/download 均需完整签名 URL；图文笔记需 download 图片后 Read"
+
+### 2026-09-03 官方 adapter-author 方法论整合 + 新站点探索体系
+- ✅ 深度调研官方 `opencli-adapter-author` skill（12 步 Runbook + 6 种 Strategy 契约模型 + 14 个 references + 站点记忆机制）
+- ✅ 明确本 skill 定位：使用者视角（跨平台调研/数据采集/工作流编排），与官方作者视角互补
+- ✅ 创建 `references/new-site-exploration.md`：`opencli browser analyze` 一步诊断、5 种 Pattern 分类、6 种 Strategy 稳定性判断（fix 频率 1.18 vs 8.41/year）、6 步探索流程、写适配器时参考官方 skill
+- ✅ 创建 `references/data-quality-checklist.md`：11 种静默失败识别（使用者视角）、5 步验证法、不同平台特殊检查点、数据质量速查表
+- ✅ 创建 `references/site-memory-guide.md`：记录什么/记录到哪里、站点记忆模板（adapter/平台/进化日志）、OpenCLI 本地记忆与 skill 记忆的分工、记忆维护
+- ✅ SKILL.md 新增"本 skill 的定位与独特价值"章节，明确 8 大优势
+- ✅ SKILL.md "探索新适配器"章节扩展为 6 步流程，引用 3 个新 reference

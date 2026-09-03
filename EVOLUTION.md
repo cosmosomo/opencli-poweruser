@@ -47,6 +47,9 @@
 | 调研工作流/方法论 | `references/research-sop.md` | 追加新策略或更新现有 SOP |
 | 脚本/工具链模式 | `references/research-scripts.md` | 追加可复用模式或参数化设计 |
 | 反爬/反调试 | `references/anti-bot-notes.md` | 追加站点反爬特征和应对策略 |
+| 新站点探索经验 | `references/new-site-exploration.md` | 追加 Pattern/Strategy 判断、analyze 输出解读、探索流程优化 |
+| 数据质量问题 | `references/data-quality-checklist.md` | 追加新的静默失败模式、验证方法、平台特殊检查点 |
+| 站点记忆规范 | `references/site-memory-guide.md` | 更新记录模板、维护规则、记忆结构 |
 | 安装配置问题 | `SETUP.md` | 追加常见问题或更新安装步骤 |
 | 本机专属（profile、目录、cookie 状态、工具链版本） | `LOCAL.md` | **不公开**，仅本机维护 |
 | 全新的方法论类别 | `references/<topic>.md` | 新建文件，在 SKILL.md 注册引用 |
@@ -154,6 +157,9 @@ SKILL.md 是 skill 的入口和速查表，不是所有细节都往里写。更�
 | `references/research-sop.md` | 调研工作流与方法论 | 新策略、SOP 优化 |
 | `references/research-scripts.md` | 脚本/工具链可复用模式 | 新模式、参数化设计更新 |
 | `references/anti-bot-notes.md` | 反爬/反调试识别与应对 | 新站点反爬特征、新应对策略 |
+| `references/new-site-exploration.md` | 新站点探索指南（analyze/Pattern/Strategy/6步流程） | 新站点探索经验、Pattern/Strategy 判断优化 |
+| `references/data-quality-checklist.md` | 数据质量检查清单（11种静默失败） | 新的数据质量问题、验证方法 |
+| `references/site-memory-guide.md` | 站点记忆指南（记录规范/模板/维护） | 记忆结构调整、记录规范更新 |
 | `LOCAL.md` | 本机专属（不公开） | 本机环境变化、工具安装/升级、cookie 状态 |
 
 ---
