@@ -141,6 +141,33 @@ export OPENCLI_WINDOW="background"
 opencli <adapter> <command> -f json
 ```
 
+### 5.4 项目级集成（推荐）
+
+> 让智能体在项目上下文中自动知道可以用本 skill 调研真实媒体信息，无需每次手动提醒。
+
+在项目根目录的 `AGENTS.md`（或对应智能体平台的系统记忆文件）中加入以下内容：
+
+```markdown
+## 外部数据采集与调研
+
+本项目可通过 `opencli-poweruser` skill 调用 OpenCLI 采集 160+ 网站/平台的真实数据（小红书、B站、知乎、Reddit、V2EX、HackerNews、BOSS直聘、GitHub Trending 等），用于议题调研、舆情风评、竞品分析、职位搜索、行业前沿追踪等场景。需要调研真实媒体新信息时，优先使用该 skill——其内置跨平台调研 SOP、关键词矩阵策略、8 平台已验证经验和数据质量检查清单。
+```
+
+**效果**：智能体在该项目中处理任何涉及"真实信息/调研/媒体/平台数据/行业前沿"的需求时，会自动识别并调用 `opencli-poweruser` skill，无需用户每次提醒。
+
+**各平台对应文件**：
+
+| 智能体平台 | 项目级指令文件 |
+|---|---|
+| 豆包 / Doubao | 项目根目录 `AGENTS.md` |
+| Cursor | `.cursor/rules/*.mdc` 或 `.cursorrules` |
+| GitHub Copilot | `.github/copilot-instructions.md` |
+| Claude Code | `CLAUDE.md` |
+| Windsurf | `.windsurf/rules` 或 `windsurf.md` |
+| 其他 | 对应平台的项目级系统记忆文件 |
+
+> 注意：这只是"提示智能体有这个能力"，实际使用仍需 OpenCLI 已安装并配置好（见前述章节）。本 skill 的安装配置指南见 `SETUP.md`，完整能力见 `SKILL.md`。
+
 ---
 
 ## 6. 智能体操作指南
