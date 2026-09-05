@@ -136,6 +136,18 @@ opencli <adapter> <command> [args] [options] -f json
 >
 > 来源：BOSS 直聘反爬 4 轮调研（CSDN/腾讯云/掘金/知乎/V2EX/影刀/GitHub/抖音）+ 小红书限流实测（2026-08-28）。
 
+## 音视频处理工作流
+
+> B站视频下载 + ASR 转写的一键封装，见 [references/bilibili-asr-workflow.md](references/bilibili-asr-workflow.md)
+>
+> 脚本：[scripts/bili_asr.py](scripts/bili_asr.py)
+>
+> 流程：BV号 → yt-dlp 下载音频(bestaudio/m4a) → faster-whisper ASR → 字幕(srt/vtt/txt/json)
+>
+> 关键经验：opencli download 在 Windows 上常报 ENOENT（已通过独立 yt-dlp.exe 解决）且只下视频流无音频；直接用 yt-dlp 只下音频快 3-5 倍；中国网络环境需设 `HF_ENDPOINT=https://hf-mirror.com` + `HF_HUB_DISABLE_XET=1`（脚本已内置）；B站 412 需 cookie（脚本自动从浏览器获取，或用 `--cookies` 指定）。
+>
+> 与 bili2rag 互补：本脚本做单视频快速转写，bili2rag 做批量 RAG 语料库构建。
+
 ## 探索新站点与新适配器（可进化机制）
 
 > 完整的新站点探索流程见 [references/new-site-exploration.md](references/new-site-exploration.md)：`opencli browser analyze` 一步诊断、5 种 Pattern 分类、6 种 Strategy 稳定性判断、6 步探索流程。
