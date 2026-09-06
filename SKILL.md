@@ -136,6 +136,12 @@ opencli <adapter> <command> [args] [options] -f json
 >
 > 来源：BOSS 直聘反爬 4 轮调研（CSDN/腾讯云/掘金/知乎/V2EX/影刀/GitHub/抖音）+ 小红书限流实测（2026-08-28）。
 
+> **调研记录规范（强制）**：每次调研必须保存原始数据和过程笔记，避免结果只存在于对话中。见 [references/research-logging.md](references/research-logging.md)
+>
+> 核心机制：调研开始时运行 `python scripts/init_research.py "议题名称"` 一键创建目录；搜索结果用 `Tee-Object` 直接存到 `raw/`；过程想法随时追加到 `notes.md`；结束时花 1 分钟填 `README.md` 关键发现。**先存后整理，低摩擦，不需要完美。**
+>
+> 脚本：[scripts/init_research.py](scripts/init_research.py)（一键创建调研目录结构和模板）
+
 ## 音视频处理工作流
 
 > B站视频下载 + ASR 转写的一键封装，见 [references/bilibili-asr-workflow.md](references/bilibili-asr-workflow.md)
