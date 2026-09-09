@@ -40,23 +40,32 @@ opencli daemon start
 opencli daemon status  # verify: Daemon running + Extension connected
 ```
 
-### 4. Clone this skill
+### 4. Clone this skill (Private Repo)
+
+> **This is a private repository containing machine-specific config. Clone into your AI platform's skill directory with the name `opencli-poweruser`.**
 
 ```bash
-# Clone into your AI platform's skill directory
-cd /path/to/your/skills/
-git clone git@github.com:<your-username>/opencli-poweruser.git
+# 豆包平台 (Doubao)
+cd "$env:USERPROFILE\AppData\Local\Doubao\User Data\Default\.doubao\agent_mode\workspace\.user_skills"
+git clone https://github.com/cosmosomo/opencli-poweruser-private.git opencli-poweruser
+
+# Workbody 平台
+cd /path/to/workbody/skills/
+git clone https://github.com/cosmosomo/opencli-poweruser-private.git opencli-poweruser
+
+# Claude Code (任意位置)
+mkdir -p ~/skills && cd ~/skills
+git clone https://github.com/cosmosomo/opencli-poweruser-private.git opencli-poweruser
 ```
 
-### 5. Configure your local environment
+### 5. Ready to use (No extra config needed)
 
-```bash
-cd opencli-poweruser
-cp local/LOCAL.md.example local/LOCAL.md
-# Edit local/LOCAL.md with your machine-specific config
-```
+**This private repo already contains `LOCAL.md` with machine-specific config (profile ID, paths, tool status). Clone后立即可用，无需额外配置。**
+
+Agent 读取 `SKILL.md` 即可开始工作。本机详细配置见 `LOCAL.md`。
 
 See [SETUP.md](SETUP.md) for detailed installation and configuration.
+See [platforms/](platforms/) for platform-specific installation guides.
 
 ---
 
