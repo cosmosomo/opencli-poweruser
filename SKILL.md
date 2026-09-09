@@ -32,45 +32,48 @@ description: >-
 > 新用户首次使用本 skill 前，必须先完成 OpenCLI 安装、浏览器扩展配置和网站登录。
 > 完整步骤见 [SETUP.md](SETUP.md)：Node.js 前置要求、npm / 桌面应用两种安装方式、Chrome 扩展安装、daemon 验证、多 profile 管理、环境变量配置、智能体操作指南。
 >
-> **本文件中的 `v6pz9gjx` 等 profile ID、端口号、目录路径均为原作者本机示例，新用户必须按 SETUP.md 在自己机器上重新配置。**
+> **本文件中的命令示例使用 `<profile-id>` 作为占位符，请替换为你自己的 Browser Bridge profile ID（通过 `opencli daemon status` 查看）。本机专属配置记录在 `local/LOCAL.md` 中（不提交到 Git）。**
 
 ## 前置检查（每次任务第一步）
 
 运行 `opencli daemon status`，确认：
-- `Daemon: running`（端口 19825）
+- `Daemon: running`（默认端口 19825）
 - `Extension: connected`（浏览器扩展已连接）
+- 记下你的 profile ID（如 `v6pz9gjx`），后续命令需要用到
 
-若 daemon 未运行，运行 `opencli daemon start` 或执行 `start-opencli-daemon.bat`。
+若 daemon 未运行，运行 `opencli daemon start`。
 若扩展未连接，在 Chrome 中确认扩展已启用并打开目标网站。
 
-## 本机环境配置
+## 环境配置
 
-### 默认浏览器 Profile
+### 浏览器 Profile
 
-本机有两个 Browser Bridge profile 连接，**默认使用 `v6pz9gjx`**（新浏览器，已登录各网站）。
+运行 `opencli daemon status` 查看已连接的 Browser Bridge profile。如果有多个 profile 连接，必须指定使用哪一个。
 
-所有命令必须加全局 `--profile` 参数（放在 `opencli` 后、适配器前）：
+所有命令加全局 `--profile` 参数（放在 `opencli` 后、适配器前）：
 ```bash
-opencli --profile v6pz9gjx <adapter> <command> -f json
+opencli --profile <profile-id> <adapter> <command> -f json
 ```
 
 或设置环境变量（当前终端会话有效）：
 ```powershell
-$env:OPENCLI_PROFILE="v6pz9gjx"
+$env:OPENCLI_PROFILE="<profile-id>"
 ```
 
 若报 `Multiple Browser Bridge profiles are connected`，说明未指定 profile，按上述方式指定即可。
 
+> **你的 profile ID 和本机配置记录在 `local/LOCAL.md` 中（不提交到 Git）。**
+
 ### 默认后台窗口模式
 
-**默认使用后台模式**，避免浏览器窗口反复弹到前台抢焦点：
+**推荐使用后台模式**，避免浏览器窗口反复弹到前台抢焦点：
 ```powershell
 $env:OPENCLI_WINDOW="background"
 ```
 
 设置后所有命令默认后台运行。仅在遇到 `stale page identity` 需要重建持久会话时，临时切一次 `foreground`：
 ```bash
-opencli --profile v6pz9gjx boss search --limit 1 --window foreground --site-session persistent -f json
+opencli --profile <profile-id> boss search --limit 1 --window foreground --site-session persistent -f json
 ```
 
 重建成功后切回 background 即可。
@@ -86,10 +89,10 @@ opencli --profile v6pz9gjx boss search --limit 1 --window foreground --site-sess
 ## 通用调用模板
 
 ```bash
-opencli --profile v6pz9gjx <adapter> <command> [args] [options] -f json
+opencli --profile <profile-id> <adapter> <command> [args] [options] -f json
 ```
 
-若已设置 `$env:OPENCLI_PROFILE="v6pz9gjx"` 和 `$env:OPENCLI_WINDOW="background"`，可省略：
+若已设置 `$env:OPENCLI_PROFILE="<profile-id>"` 和 `$env:OPENCLI_WINDOW="background"`，可省略：
 ```bash
 opencli <adapter> <command> [args] [options] -f json
 ```
@@ -115,13 +118,13 @@ opencli <adapter> <command> [args] [options] -f json
 | `hackernews` / `arxiv` / `wttr` 等 | 公开 API | ✅ 可用 | 无需浏览器 | [adapter-public-api.md](references/adapter-public-api.md) |
 | `doubao` / `chatgpt` / `claude` | AI 工具 | ⚠️ 部分可用 | ChatGPT 因 UI 改版选择器失效 | 见 pitfalls.md |
 
-## 本机专属环境（LOCAL.md，不公开）
+## 本机专属环境（local/LOCAL.md，不提交）
 
-> 本机专属的工具链状态、目录结构、登录状态、专属工作流串联，记录在 [LOCAL.md](LOCAL.md) 中。
+> 本机专属的工具链状态、目录结构、登录状态、专属工作流串联，记录在 `local/LOCAL.md` 中。
 >
-> **此文件不打包进入 GitHub，不公开分享。** 包含：本机已安装/待安装工具（OpenCLI / yt-dlp / ffmpeg / bili2rag / faster-whisper）、知识空间目录结构、平台登录状态、cookie 状态、无字幕视频 ASR 决策树、OpenCLI 能力边界与弥补方式。
+> **此文件不提交到 Git，不公开分享。** 包含：本机已安装/待安装工具（OpenCLI / yt-dlp / ffmpeg / bili2rag / faster-whisper）、知识空间目录结构、平台登录状态、cookie 状态、无字幕视频 ASR 决策树、OpenCLI 能力边界与弥补方式。
 >
-> 公开版 skill 不应包含此文件；已通过 `.gitignore` 排除。
+> 首次使用时从 `local/LOCAL.md.example` 复制一份，填入你自己的配置。已通过 `.gitignore` 排除 `local/` 目录。
 
 ## 可复用调研工作流
 
@@ -215,8 +218,8 @@ opencli browser <session> analyze <url>
 ## 遇到问题
 
 1. `stale page identity` → 用 `--window foreground --site-session persistent` 重建一次持久会话，后续切 `--window background`（详见 pitfalls.md 和 adapter-boss.md）
-2. `AUTH_REQUIRED` → 在 Chrome（v6pz9gjx profile）中登录对应网站
-3. `Multiple Browser Bridge profiles are connected` → 未指定 profile，加 `--profile v6pz9gjx`（全局参数，放在 opencli 后适配器前）或设 `$env:OPENCLI_PROFILE="v6pz9gjx"`
+2. `AUTH_REQUIRED` → 在 Chrome（你配置的 profile）中登录对应网站
+3. `Multiple Browser Bridge profiles are connected` → 未指定 profile，加 `--profile <profile-id>`（全局参数，放在 opencli 后适配器前）或设 `$env:OPENCLI_PROFILE="<profile-id>"`
 4. 命令无响应/卡住 → 检查 daemon 状态，必要时重启
 5. 输出格式异常 → 确认加了 `-f json`，部分适配器默认输出非标准格式
 

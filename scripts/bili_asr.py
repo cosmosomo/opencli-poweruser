@@ -52,15 +52,34 @@ def run_cmd(cmd, **kwargs):
 
 # ── Step 1: 从浏览器获取 B站 cookie（非 HttpOnly）────────────────────────────
 def get_cookies_from_browser(profile=None):
-    """用 opencli browser eval 从已登录的 Chrome 获取 document.cookie"""
+    """用 opencli browser 从已登录的 Chrome 获取 document.cookie
+    流程：open B站首页建立会话 → eval 获取 cookie → close 会话
+    """
     print("[cookie] 从浏览器获取 B站 cookie...")
-    cmd = [OPENCLI, "browser", "eval", "document.cookie"]
+    session = "bili_asr_tmp"
+    base = [OPENCLI]
     if profile:
-        cmd = [OPENCLI, "--profile", profile, "browser", "eval", "document.cookie"]
-    result = run_cmd(cmd)
+        base += ["--profile", profile]
+    base += ["browser", session]
+
+    # 1. 打开 B站首页建立会话
+    open_cmd = base + ["open", "https://www.bilibili.com", "--window", "background"]
+    result = run_cmd(open_cmd, timeout=30)
+    if result.returncode != 0:
+        print(f"  ⚠️  打开 B站页面失败: {result.stderr[:150]}")
+        return None
+
+    # 2. 等待页面加载
+    import time
+    time.sleep(2)
+
+    # 3. 获取 cookie
+    eval_cmd = base + ["eval", "document.cookie"]
+    result = run_cmd(eval_cmd, timeout=15)
     if result.returncode != 0 or not result.stdout.strip():
         print(f"  ⚠️  获取 cookie 失败: {result.stderr[:200]}")
         return None
+
     raw = result.stdout.strip().strip('"')
     # 解析 key=value; key=value
     cookies = {}
@@ -69,6 +88,11 @@ def get_cookies_from_browser(profile=None):
             k, v = pair.strip().split("=", 1)
             cookies[k.strip()] = v.strip()
     print(f"  获取到 {len(cookies)} 个 cookie")
+
+    # 4. 关闭临时会话
+    close_cmd = base + ["close"]
+    run_cmd(close_cmd, timeout=10)
+
     return cookies
 
 

@@ -1,0 +1,94 @@
+# LOCAL — 本机专属配置（模板）
+
+> ⚠️ **复制此文件为 LOCAL.md，填入你自己的配置。LOCAL.md 不提交到 Git。**
+> 包含：本机工具链状态、目录路径、profile ID、登录状态。
+
+---
+
+## 1. 基本信息
+
+| 项目 | 值 |
+|---|---|
+| 操作系统 | (Windows / macOS / Linux) |
+| OpenCLI 版本 | (运行 `opencli --version` 查看) |
+| Python 版本 | (运行 `python --version` 查看) |
+| 默认 Python 路径 | (如 `C:\Users\<user>\.pyenv\pyenv-win\versions\3.12.4\python.exe`) |
+
+## 2. Browser Bridge Profile
+
+运行 `opencli daemon status` 查看已连接的 profile，填入下面：
+
+| Profile ID | 说明 | 是否默认 |
+|---|---|---|
+| (如 v6pz9gjx) | (如新浏览器，已登录各网站) | ✅ / ❌ |
+| (如 svxyqy6c) | (如旧浏览器) | ❌ |
+
+**默认 profile**：(填入默认使用的 profile ID)
+
+**daemon 端口**：(默认 19825)
+
+## 3. 环境变量
+
+推荐在终端中设置：
+
+```powershell
+# PowerShell
+$env:OPENCLI_PROFILE="<your-profile-id>"
+$env:OPENCLI_WINDOW="background"
+```
+
+```bash
+# macOS/Linux
+export OPENCLI_PROFILE="<your-profile-id>"
+export OPENCLI_WINDOW="background"
+```
+
+## 4. 工具链状态
+
+| 工具 | 状态 | 版本/路径 | 备注 |
+|---|---|---|---|
+| OpenCLI | ✅/❌ | | |
+| yt-dlp | ✅/❌ | | |
+| ffmpeg | ✅/❌ | | |
+| faster-whisper | ✅/❌ | | |
+| imageio-ffmpeg | ✅/❌ | | |
+| bili2rag | ✅/❌ | | |
+
+## 5. 知识空间目录
+
+```
+(你的知识空间根目录，如 E:\program\media\knowledge-space\)
+├── chatgpt/           # ChatGPT 导出对话
+├── xiaohongshu/       # 小红书调研项目
+└── research-logs/     # 调研记录（由 init_research.py 创建）
+```
+
+**调研记录根目录**：(如 `E:\program\media\knowledge-space\research-logs`)
+
+## 6. 平台登录状态
+
+| 平台 | 登录状态 | 备注 |
+|---|---|---|
+| 小红书 | ✅/❌ | |
+| 知乎 | ✅/❌ | |
+| B站 | ✅/❌ | |
+| Reddit | ✅/❌ | |
+| V2EX | ✅/❌ | |
+| GitHub | ✅/❌ | |
+| BOSS直聘 | ✅/❌ | |
+| 其他 | | |
+
+## 7. Cookie 状态
+
+| 平台 | Cookie 文件路径 | 备注 |
+|---|---|---|
+| B站 | (如 `E:\program\media\bilibili_cookies_netscape.txt`) | |
+| 其他 | | |
+
+## 8. 本机专属工作流
+
+（记录你本机特有的工作流串联，如特定的脚本路径、别名、快捷方式等）
+
+---
+
+*模板版本：v1.0 | 最后更新：2026-09-09*

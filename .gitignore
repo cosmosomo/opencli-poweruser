@@ -1,4 +1,8 @@
-# 本机专属文件（不公开）
+# 本机专属目录（不公开，保留 example 模板）
+local/*
+!local/LOCAL.md.example
+
+# 兼容旧路径
 LOCAL.md
 
 # 敏感凭证
