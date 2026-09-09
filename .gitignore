@@ -1,27 +1,20 @@
-# 本机专属目录（不公开，保留 example 模板）
-local/*
-!local/LOCAL.md.example
-
-# 兼容旧路径
-LOCAL.md
-
-# 敏感凭证
+﻿# 真正的敏感凭证（cookie/token/密钥）
 cookie*.txt
 cookies*.txt
 *.cookie
 .env
 .env.*
 
-# 原始数据（可能包含登录态/个人信息）
-raw-data/
-*.zip
-
-# 系统/编辑器
+# 临时文件/系统文件
 .DS_Store
 Thumbs.db
 *.swp
 *.swo
 *~
-
-# Node（如果有）
 node_modules/
+raw-data/
+*.zip
+
+# local/ 目录下除了 example 都不提交（但根目录 LOCAL.md 提交）
+local/*
+!local/LOCAL.md.example
