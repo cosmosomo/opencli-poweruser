@@ -199,6 +199,13 @@ cmd /c start "OpenCLI Daemon" /B "node.exe" "daemon.js"
 - ✅ 更新 `SKILL.md`：boss 速查表状态改为"⚠️ 只读低频可用"，注册 anti-bot-notes.md
 - ✅ 更新 `pitfalls.md`：新增通用问题第 7 条"CDP 自动化特征被站点反爬探测"
 
+### 2026-09-10 v2ex 适配器命令清单核对
+
+- ⚠️ SKILL.md/verified-platforms.md 未明确列出 v2ex **没有 `search` 命令**；直接尝试 `opencli v2ex search ... ` 报 `error: unknown command 'search'`
+- ✅ 实际命令清单（`opencli v2ex --help`）：`daily, hot, latest, login, me, member, node, nodes, notifications, replies, topic, user, whoami`；全文检索类需求只能靠 `node <name>` 拉指定节点列表 + 人工筛选，或用 `hot`/`latest` 泛读，**没有关键词搜索能力**
+- 📌 通用教训：适配器命令集不能假设"其他平台常见命令它也有"（如 search/comments），调用前先跑一次 `opencli <adapter> --help` 确认真实命令清单，尤其是速查表里没写全命令的平台
+- 📝 待补：`adapter-v2ex.md`（目前只在 verified-platforms.md 里有一行，未单独立卡）——下次深入用 v2ex 时应创建独立文件并写清"无 search，靠 node/hot/latest"这条限制
+
 ---
 
 ## 新适配器验证模板
