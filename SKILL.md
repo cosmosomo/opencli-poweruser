@@ -130,9 +130,13 @@ opencli <adapter> <command> [args] [options] -f json
 
 > 跨平台议题调研的标准流程、关键词策略、平台策略、数据处理流程、工具链经验，见 [references/research-sop.md](references/research-sop.md)
 >
-> 调研脚本的可复用模式（7种）、硬编码问题清单、参数化脚本设计规范，见 [references/research-scripts.md](references/research-scripts.md)
+> 调研脚本的可复用模式（8种）、硬编码问题清单、参数化脚本设计规范，见 [references/research-scripts.md](references/research-scripts.md)
 >
-> 涵盖：关键词矩阵搜索、递归新词捕获、多平台交叉验证、平台适配关键词、批量采集→去重→结构化→分类→总结、点赞/时间质量过滤、OpenCLI 标准采集流程、8 步标准调研 SOP、脚本分层模型、参数化核心脚本设计。
+> **议题词典方法论**（把关键词从一次性弹药升级为带认知评估、可跨议题复用的词典资产）见 [references/topic-lexicon.md](references/topic-lexicon.md)：认知闭环模型、七栏词典骨架、五维评估（热度/新鲜度/前沿度🔮/本质度⚙️/契合度）、顺藤摸瓜递归与剪枝规则、search/note 配额分配、词典纵向追踪与跨议题迁移、反哺舆情/数据质量/ASR 等其他 SOP。脚本 [scripts/lexicon_scan.py](scripts/lexicon_scan.py)（tags/freq/tier/inventory 四模式，参数化不含议题词）。
+>
+> **⚠️ 前沿议题调研第一前提：AI 必须清楚自己并不知道真正的前沿词汇。** 词汇知识截止于训练数据，领域越前沿先验越不可靠——"AI 不认识但语料高频"是最强前沿信号，优先反查+精读；只做一轮搜索等于只拿到 AI 已知的世界。开工先声明盲区，词典每词标 `AI先验: 认识/模糊/不认识`，并警惕"认识但已改名/已过时"陷阱（实例：Code Mode 已改名 PTC Mode）。详见 topic-lexicon.md §一。
+>
+> 涵盖：关键词矩阵搜索、递归新词捕获、**议题词典与认知评估（七栏骨架/五维评估/AI 盲区自觉）**、多平台交叉验证、平台适配关键词、批量采集→去重→结构化→分类→总结、点赞/时间质量过滤、OpenCLI 标准采集流程、8 步标准调研 SOP、脚本分层模型、参数化核心脚本设计。
 > 来源：小红书 SDD 253 条笔记、6 大技术渠道核验、Scopus 自动化方案、8 平台登录验证、xhs_search 脚本体系分析等多轮实践总结。
 >
 > 站点反爬/反调试识别与应对（CDP 特征暴露点、8 种 DevTools 探测器、降频策略、技术路线评估、已确认站点反爬状态），见 [references/anti-bot-notes.md](references/anti-bot-notes.md)
@@ -275,3 +279,10 @@ opencli browser <session> analyze <url>
 - ✅ 创建 `references/site-memory-guide.md`：记录什么/记录到哪里、站点记忆模板（adapter/平台/进化日志）、OpenCLI 本地记忆与 skill 记忆的分工、记忆维护
 - ✅ SKILL.md 新增"本 skill 的定位与独特价值"章节，明确 8 大优势
 - ✅ SKILL.md "探索新适配器"章节扩展为 6 步流程，引用 3 个新 reference
+
+### 2026-09-12 议题词典方法论沉淀（Agent Harness 领域调研驱动）
+- ✅ 创建 `references/topic-lexicon.md`：认知闭环模型（脑中词表→探针→捕获陌生词→立体认知→再摸瓜）、**AI 前沿盲区自觉（硬规则：AI 不认识但语料高频=最强前沿信号，开工先声明盲区，每词标 AI先验，强制跑第二轮反查）**、七栏词典骨架、五维评估（热度/新鲜度/前沿度🔮/本质度⚙️/契合度）+ 升降级判据、顺藤摸瓜递归与剪枝规则、🔥search/❄️note 配额分配、词典纵向追踪（议题雷达）与跨议题迁移、反哺舆情/数据质量/ASR/招聘等 SOP
+- ✅ 创建 `scripts/lexicon_scan.py`：参数化词典扫描器（tags/freq/tier/inventory 四模式，不含议题专属词），内置 read_json（BOM 三级嗅探）与 flatten（note 摊平结构）两个踩坑工具函数；已用本次 58 篇/51 精读真实数据验证 tags（160 标签）、inventory（58 去重）、tier（分层+AI先验标注）全部通过
+- ✅ 明确 content/skill 分层纪律：词典本体（具体词条）属单次任务数据留 research 目录，只有方法论与参数化脚本进 skill
+- ✅ 更新 `research-sop.md` §七衔接词典、`research-scripts.md` 第 8 种模式、`EVOLUTION.md` 归档规则与文件职责表
+- 来源：Agent Harness 领域调研（DSH/Pi/Hermes/Cordis 路线之争），小红书 11 组关键词→58 篇去重→51 篇精读→130+ 词条词典

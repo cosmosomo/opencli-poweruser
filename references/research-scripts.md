@@ -19,7 +19,7 @@
 
 ---
 
-## 二、可复用的代码模式（7 种）
+## 二、可复用的代码模式（8 种）
 
 这些模式是从 xhs_search 脚本中提炼的，换议题/换平台时可直接复用：
 
@@ -43,6 +43,21 @@ OpenCLI 输出常混有 `Update available`、`RemoteException`、`npm install` �
 
 ### 7. Markdown 报告生成
 用 StringBuilder 拼接：目录总览表（主题/条数/最高热度）+ 分类详情表（序号/标题/作者/热度/时间/链接）+ 全文汇总。
+
+### 8. 议题词典扫描（tags / freq / tier / inventory）
+已参数化为 `scripts/lexicon_scan.py`，不含任何议题专属词，跨议题直接复用：
+- `tags <dir>`：从精读笔记 tags 字段全量提取话题标签 + 频次。**search 标题层看不到外层词，tags 是被严重低估的信源**（作者自打标签，不受热度排序影响）。
+- `freq <dir> <words.txt>`：候选词表在"精读正文 + 搜索命中"合并语料中的频次实扫；英文词自动加词边界，中文词子串匹配。
+- `tier <dir> <words.txt>`：freq + 热度分层（🔥 n≥40 / ♨️ n≥5 / ❄️ n<5），并把词表里的 `AI先验` 标注原样带进输出，便于人工补 🔮前沿度 / ⚙️本质度。
+- `inventory <dir>`：由 `raw/kw*.json` 生成去重清单 TSV（同笔记取最高赞），供批量精读与后续统计。
+
+词表格式：一行一词，可用 ` | ` 追加 AI 先验状态（`认识/模糊/不认识`），`#` 开头为注释。
+
+两个必须内置的读取工具函数（都踩过坑）：
+- `read_json()`：BOM 嗅探三级 fallback（utf-16 / utf-8-sig / utf-8）——PowerShell 5.1 `Tee-Object` 落盘是 UTF-16 LE，直接按 utf-8 读会报 `0xff invalid start byte`。
+- `flatten()`：`opencli note -f json` 返回 `[{field,value},...]` 摊平结构，不是嵌套 dict。
+
+方法论见 [topic-lexicon.md](topic-lexicon.md)。
 
 ---
 

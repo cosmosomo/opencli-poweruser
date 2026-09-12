@@ -45,6 +45,8 @@
 | 通用踩坑/已知故障 | `references/pitfalls.md` | 追加到对应章节，进化日志记录日期 |
 | 平台登录状态变化 | `references/verified-platforms.md` | 更新表格状态和备注 |
 | 调研工作流/方法论 | `references/research-sop.md` | 追加新策略或更新现有 SOP |
+| **议题词典/关键词认知评估** | `references/topic-lexicon.md` | 新的词典结构、评估维度、递归剪枝规则、盲区自觉判据 |
+| **议题词典本体（具体词条）** | ❌ 不进 skill | 属 content 层单次任务数据，留在 `research/<日期>-<议题>/` |
 | 脚本/工具链模式 | `references/research-scripts.md` | 追加可复用模式或参数化设计 |
 | 反爬/反调试 | `references/anti-bot-notes.md` | 追加站点反爬特征和应对策略 |
 | 新站点探索经验 | `references/new-site-exploration.md` | 追加 Pattern/Strategy 判断、analyze 输出解读、探索流程优化 |
@@ -157,6 +159,8 @@ SKILL.md 是 skill 的入口和速查表，不是所有细节都往里写。更�
 | `references/pitfalls.md` | 通用踩坑与进化日志 | 新通用问题、适配器特定问题 |
 | `references/adapter-*.md` | 单适配器详细经验 | 该适配器新发现的参数/限制/踩坑 |
 | `references/research-sop.md` | 调研工作流与方法论 | 新策略、SOP 优化 |
+| `references/topic-lexicon.md` | 议题词典方法论（认知闭环/七栏骨架/五维评估/AI 盲区自觉/递归剪枝/配额分配） | 新的词典结构、评估维度、盲区判据 |
+| `scripts/lexicon_scan.py` | 议题词典扫描（tags/freq/tier/inventory 四模式，参数化无议题词） | 模式扩展、bug 修复 |
 | `references/research-scripts.md` | 脚本/工具链可复用模式 | 新模式、参数化设计更新 |
 | `references/anti-bot-notes.md` | 反爬/反调试识别与应对 | 新站点反爬特征、新应对策略 |
 | `references/new-site-exploration.md` | 新站点探索指南（analyze/Pattern/Strategy/6步流程） | 新站点探索经验、Pattern/Strategy 判断优化 |

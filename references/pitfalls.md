@@ -90,6 +90,8 @@ cmd /c start "OpenCLI Daemon" /B "node.exe" "daemon.js"
 - 单次 `--limit ≤ 10`，每批 1 个关键词，间隔 ≥30 秒；
 - 连续 2 次空数组立即停手，冷却 ≥60 秒，用 `feed --limit 5` 探活区分限流/关键词；
 - 长期不恢复 → `--window foreground --site-session persistent` 重建会话。
+
+**2026-09-10 补充（长会话累积限流）**：同一 session 内当天已做约 50+ 次 search/note/comments 混合调用后，即使间隔已有数分钟，用高频词（"秋招"，此前几十次调用都能命中大量结果）探活仍返回 `[]`——说明限流不是纯粹按"上一次调用后经过多久"计算，可能有当天累积调用量或调用总频次的阈值。**遇到长时间连续密集调研（几十次以上调用）后突然全线返回空，不要只等 60 秒重试，先确认是否是累积量触发，必要时切换到其他平台（知乎/Reddit）等到明显更长时间（数十分钟级）或换 session 再回来。**
 - 详细对策见 `adapter-xiaohongshu.md` 的"实测反爬教训"章节。
 
 ### 7. CDP 自动化特征被站点反爬探测 → 刷新/登出/stale（2026-08-28 调研结论）
@@ -108,6 +110,56 @@ cmd /c start "OpenCLI Daemon" /B "node.exe" "daemon.js"
 - 连续 2 次闪烁/登出即停手，冷却 ≥ 60s；
 - 长期需求走人机协作（浏览器插件只读 DOM / 截图+AI），不要依赖 CDP 纯自动化；
 - 识别方法与应对策略详见 `anti-bot-notes.md`。
+
+### 8. v1.8.6 没有 `opencli daemon start`（2026-09-12 实测）
+
+**现象**：`opencli daemon start` 报 `error: unknown command 'start'`。
+
+**原因**：daemon 子命令只有 `restart / status / stop`，没有 start（daemon 由 restart 或首次浏览器命令自动拉起）。
+
+**解决**：用 `opencli daemon restart`，随后 `opencli daemon status` 确认 `running on port 19825`。
+
+### 9. 适配器命令没有 `--timeout` 参数（2026-09-12 实测）
+
+**现象**：`opencli xiaohongshu whoami --timeout 90` 报 `error: unknown option '--timeout'`（帮助文本里提到的 `--timeout <seconds>` 在部分命令上不生效）。
+
+**解决**：用环境变量调全局超时：`$env:OPENCLI_BROWSER_COMMAND_TIMEOUT="120"`（单位秒），在同一 PowerShell 会话内对后续所有命令生效。
+
+### 10. whoami 走 creator 站点，探活应该用 feed（2026-09-12 实测，重要）
+
+**现象**：`xiaohongshu whoami` 第一次 60s TIMEOUT、第二次报 `AUTH_REQUIRED: Xiaohongshu creator profile requires login: 登录已过期`（指向 creator.xiaohongshu.com）；但同 profile 的 `feed`/`search` 完全正常。
+
+**原因**：whoami/creator-* 系列命令依赖**创作服务平台**登录态，与 www 浏览登录态是分开的两套 cookie；创作平台掉登录不影响采集。
+
+**解决**：通道探活一律用 `opencli --profile <id> xiaohongshu feed --limit 3 -f json`，**不要用 whoami**；只有需要创作者数据时才修 creator 登录。
+
+### 11. Python subprocess 调 opencli.cmd 会把签名 URL 在 `&` 处截断（2026-09-12 实测，Windows 关键坑）
+
+**现象**：脚本里 `subprocess.run(["opencli.cmd", ..., "note", "https://...?xsec_token=xx&xsec_source="])` 后，opencli 只收到 `&` 前的半截 URL，报 `'xsec_source' is not recognized as an internal or external command`，且 `-f json` 参数丢失、输出退化成 YAML field 列表。
+
+**原因**：`opencli.cmd` 是 cmd.exe 批处理 shim，cmd 把 `&` 当命令分隔符，Python 的 list-argv 会被拼进 cmd 命令行后重新解析。直接 `subprocess.run(["opencli", ...])` 还会因 WinError 2（找不到裸 exe）失败。
+
+**解决**：**绕开 .cmd shim，用 node 直调真实入口**：
+```python
+MAIN_JS = Path(r"C:\Users\<user>\AppData\Roaming\npm\node_modules\@jackwener\opencli\dist\src\main.js")
+cmd = ["node", str(MAIN_JS), "--profile", PROFILE, "xiaohongshu", "note", url, "-f", "json"]
+subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="replace")
+```
+入口路径从 `opencli.cmd` 内容最后一行可读出。PowerShell 里直接调用（单引号包 URL 或双引号+`%` 转义）不受此影响。
+
+### 12. PowerShell 5.1 `Tee-Object` 落盘是 UTF-16 LE，Python json 直接读会炸（2026-09-12 实测）
+
+**现象**：`opencli ... -f json | Tee-Object file.json` 后，Python `json.loads(open(f, encoding='utf-8-sig').read())` 报 `0xff invalid start byte`。
+
+**原因**：PS 5.1 的 Tee-Object/Set-Content 默认 UTF-16 LE + BOM（`FF FE` 开头），不是 UTF-8。
+
+**解决**：读取端做 BOM 嗅探（`utf-16` / `utf-8-sig` / `utf-8` 三级 fallback）；或写入端显式转码：`$out | Out-File $f -Encoding utf8`。调研脚本里封装一个 `read_json()` 工具函数一劳永逸。
+
+### 13. opencli note 输出是 `[{field, value}]` 摊平结构（2026-09-12 实测）
+
+**现象**：`xiaohongshu note <url> -f json` 返回的不是嵌套对象，而是 `[{"field":"title","value":...}, {"field":"content","value":...}, ...]`（含 title/author/content/likes/collects/comments/tags）。
+
+**解决**：解析时先摊平 `{i["field"]: i["value"]}` 再取字段；不要按 dict 或嵌套结构假设。
 
 ## 适配器特定问题
 
@@ -207,6 +259,15 @@ cmd /c start "OpenCLI Daemon" /B "node.exe" "daemon.js"
 - 📝 待补：`adapter-v2ex.md`（目前只在 verified-platforms.md 里有一行，未单独立卡）——下次深入用 v2ex 时应创建独立文件并写清"无 search，靠 node/hot/latest"这条限制
 
 ---
+
+### 2026-09-12 Agent Harness 领域调研（千问工作助理环境首战）
+
+- ✅ 新环境部署：千问工作助理（Windows）SkillImport 安装本 skill 成功；opencli v1.8.6 全局可用，daemon restart 拉起，profile v6pz9gjx 桥接正常
+- ✅ 单平台批量采集实测：11 组关键词（6 组命中）→ 58 篇去重 → **51 篇 note 全文精读零风控**（7s 间隔）——再次验证 note 通道远比 search 宽松，"先攒 search 列表、后批量精读"策略成立
+- ✅ 调研成果：Agent Harness 领域（DSH/Pi/Hermes/Cordis 路线之争）关键词图谱+路线分析报告，存调研目录 `research/2026-09-12-agent-harness/`
+- ⚠️ 本次踩坑 6 条已固化为本文件通用问题 §8-§13：daemon 无 start / 无 --timeout / whoami 走 creator 站点（探活用 feed）/ Python 调 .cmd shim 截断签名 URL（node 直调 main.js）/ Tee-Object UTF-16 编码坑 / note 输出 field-value 摊平结构
+- ⚠️ search 累积限流复现：第 6 词后 OpenClaw/harness论文/harness对比/上下文工程 四连空数组（feed 探活正常），与 §6 长会话累积限流模式一致；本次靠"转 note 精读"完成调研，未硬等冷却
+- 📝 待办：`OpenClaw`、`上下文工程` 两个关键词在冷却充分后补跑
 
 ## 新适配器验证模板
 
