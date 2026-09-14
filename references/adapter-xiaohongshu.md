@@ -43,11 +43,139 @@ COOKIE 策略——通过浏览器扩展在页面内执行 JS 抓取数据。
 **错误用法**：`opencli xiaohongshu note 6a6c95b1000000002402f61c`
 **正确用法**：`opencli xiaohongshu note "https://www.xiaohongshu.com/explore/6a6c95b1...?xsec_token=xxx&xsec_source="`
 
-从 search/feed 结果中取 `url` 字段（已包含 xsec_token），而非仅用 `id`。
+**铁律**：
+1. URL **必须**从 search/feed 结果的 `url` 字段原样复制，**绝对不要手动拼接或截断**（xsec_token 很长，手动写极易截断导致静默失败）
+2. 用**单引号**包裹 URL，避免 `&` 被 PowerShell 解析
+3. note/comments/download 三个命令都需要完整签名 URL，不只是 note
+
+### ⚠️ 核心命令输出格式（极易踩坑，必读）
+
+#### note 命令输出：field-value 对列表，不是 dict
+
+`note` 命令返回的是 `[{"field":"title","value":"..."}, {"field":"content","value":"..."}, ...]` 格式，**不是直接的 dict**。
+
+**错误写法**：
+```python
+data = json.load(fh)
+title = data.get('title', '')  # ❌ 'list' object has no attribute 'get'
+```
+
+**正确写法**：
+```python
+data = json.load(fh)
+note = {item['field']: item['value'] for item in data}  # ✅ 先转成 dict
+title = note.get('title', '')
+content = note.get('content', '')
+```
+
+可用字段：`title, author, content, likes, collects, comments, tags`
+
+#### search 结果没有 id 字段，去重需从 URL 提取
+
+search 输出字段只有 `rank, title, author, author_url, likes, url, published_at`（**无 id 字段**，去重见上文），**没有 id 字段**（feed 结果才有 id）。
+
+**错误写法**：
+```python
+nid = note.get('id', '')  # ❌ search 结果永远返回空，去重全失效
+```
+
+**正确写法**：
+```python
+url = note.get('url', '')
+if '/explore/' in url:
+    nid = url.split('/explore/')[1].split('?')[0]
+elif '/search_result/' in url:
+    nid = url.split('/search_result/')[1].split('?')[0]
+```
+
+#### download 图片输出路径固定，不可指定
+
+download 命令的图片固定保存在 `xiaohongshu-downloads/<note-id>/<note-id>_N.jpg`，**无法通过参数指定输出目录**。
+
+download 输出包含大量进度条，必须过滤：
+```powershell
+opencli xiaohongshu download '<full_url>' -f json 2>&1 | Select-String -Pattern "✓|Download complete|error"
+```
+
+#### comments 命令输出：dict 列表，不是 field-value 对
+
+`comments` 命令返回的是 **dict 列表**（和 note 的 field-value 对列表不同！），每个评论是一个 dict。
+
+**输出字段**：
+| 字段 | 含义 |
+|---|---|
+| `rank` | 评论排序 |
+| `author` | 评论者昵称 |
+| `userId` | 评论者用户 ID |
+| `profileUrl` | 评论者主页链接 |
+| `text` | 评论正文 |
+| `likes` | 点赞数 |
+| `time` | 评论时间 |
+| `is_reply` | 是否为楼中楼回复（true/false） |
+| `reply_to` | 回复的目标评论 ID |
+
+**正确读取方式**：
+```python
+with open(f, 'r', encoding='utf-8-sig') as fh:
+    comments = json.load(fh)  # ✅ 直接是 dict 列表，不需要转换
+for c in comments:
+    print(c['author'], c['text'][:50], c['likes'])
+```
+
+**注意**：comments 默认返回 10 条评论，楼中楼通过 `is_reply=true` 和 `reply_to` 标识。comments 命令同样需要完整签名 URL（含 xsec_token）。
+
+### PowerShell 输出编码（所有适配器通用）
+
+PowerShell 的 `Out-File` 默认输出 **UTF-16 LE BOM** 编码，不是 UTF-8。Python 读取时必须用 `utf-8-sig`：
+
+```python
+# ❌ 会报错或乱码
+with open(f, 'r', encoding='utf-8') as fh:
+    data = json.load(fh)
+
+# ✅ 正确
+with open(f, 'r', encoding='utf-8-sig') as fh:
+    data = json.load(fh)
+```
+
+### ⚠️ note/comments 命令偶发静默失败（必须检查+重试）
+
+**现象**：批量连续调用 note/comments 时，偶发输出 **0B 空文件**，无任何报错信息，exit code 为 0。实测 5 篇连续 note 调用中 2 篇出现空文件，重试后全部成功。
+
+**可能原因**：
+- 连续调用时偶发超时或浏览器会话波动
+- `2>$null` 重定向在某些情况下与管道交互异常
+- 部分笔记首次访问需要建立会话，第二次才成功
+
+**必须的防护措施**：
+1. **批量脚本中检查输出文件大小**，0B 视为失败
+2. **失败后自动重试 1 次**（间隔 5 秒），重试成功率接近 100%
+3. 不要假设"命令没报错就是成功"——空文件是最常见的静默失败
+
+**示例防护代码**：
+```python
+import os, subprocess, time
+
+def safe_note(url, output_path, max_retries=2):
+    for attempt in range(max_retries):
+        # 调用 opencli
+        result = subprocess.run(
+            ['opencli', 'xiaohongshu', 'note', url, '-f', 'json'],
+            capture_output=True, text=True
+        )
+        with open(output_path, 'w', encoding='utf-8') as f:
+            f.write(result.stdout)
+        # 检查文件大小
+        if os.path.getsize(output_path) > 100:
+            return True
+        print(f'  空文件，重试 ({attempt+1}/{max_retries})...')
+        time.sleep(5)
+    return False
+```
 
 ### search 输出字段
 
-`rank, title, author, author_url, likes, url, published_at`
+`rank, title, author, author_url, likes, url, published_at`（**无 id 字段**，去重见上文）
 
 ### feed 输出字段
 
@@ -196,4 +324,41 @@ COOKIE 策略——通过浏览器扩展在页面内执行 JS 抓取数据。
 
 ---
 
-*本文件最后更新：2026-09-12*
+---
+
+## 核心命令正确用法补遗（2026-09-14 Agent做PPT调研）
+
+> 来源：25 篇高赞笔记精读实战中暴露的 5 个核心命令使用错误，全部已写入上方"关键注意事项"章节。
+
+- **note 输出格式未文档化**：之前只写了"note 需完整签名 URL"，完全没提 note 返回的是 field-value 对列表而非 dict。导致 data.get('title') 直接报错。已补充错误/正确写法对比。
+- **search 无 id 字段未提醒**：search 输出字段列了 7 个字段但没强调"无 id"，导致去重时 note.get('id','') 全部返回空。已补充从 URL 提取 id 的正确写法。
+- **URL 截断静默失败**：强调了"需完整 URL"但没说"从哪取、不能手拼"。手动硬编码 URL 时 xsec_token 被截断，download 静默失败。已升级为"铁律"三条。
+- **PowerShell 编码陷阱**：Out-File 默认 UTF-16 LE BOM，Python json.load 用 utf-8 读取直接报错。所有适配器通用，已补充 utf-8-sig 正确写法。
+- **download 输出路径不可指定**：之前只提了路径示例，没强调"无法通过参数指定输出目录"。已补充说明。
+
+**经验总结**：适配器经验文件不能只写"命令能跑通"，必须写清：输出的精确数据结构、常见错误写法与正确写法对比、静默失败的识别方法。
+
+---
+
+## 第二轮实战补遗（2026-09-14 评论区+低赞笔记挖掘）
+
+> 来源：在第一轮 25 篇精读基础上，追加 3 篇高赞笔记评论区 + 5 篇低赞笔记精读，暴露 2 个新坑。
+
+### 新坑 1：comments 输出格式与 note 完全不同
+
+- note 返回 field-value 对列表 `[{"field":"title","value":...}]`
+- comments 返回 **dict 列表**，每个评论直接是 `{"rank":1,"author":"...","text":"...","likes":"15","is_reply":false,...}`
+- 之前完全没文档化，第一次用会困惑为什么格式不一样
+- 已补充完整字段说明表和正确读取代码
+
+### 新坑 2：note/comments 偶发静默失败（0B 空文件）
+
+- 实测 5 篇连续 note 调用中 2 篇输出 0B 空文件，exit code 0，无任何报错
+- 重试后全部成功（重试成功率接近 100%）
+- 可能原因：连续调用超时/会话波动、`2>$null` 与管道交互异常
+- **铁律**：批量脚本必须检查输出文件大小，0B 视为失败并自动重试 1 次
+- 已补充 safe_note 防护函数示例代码
+
+---
+
+*本文件最后更新：2026-09-14（第二轮实战补遗）*

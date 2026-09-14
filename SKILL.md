@@ -100,13 +100,31 @@ opencli <adapter> <command> [args] [options] -f json
 查询某适配器支持的命令：`opencli <adapter> --help`
 列出所有可用适配器：`opencli --help`（输出中包含全部 adapter 名称）
 
+### ⚠️ 输出处理通用提醒（所有适配器适用）
+
+**PowerShell 编码**：`Out-File` 默认输出 UTF-16 LE BOM，Python 读取必须用 `encoding='utf-8-sig'`，否则 json.load 会报错或乱码。
+
+```powershell
+# 保存结果
+opencli <adapter> <command> -f json 2>$null | Out-File -FilePath "result.json" -Encoding utf8
+```
+```python
+# 读取结果（必须 utf-8-sig）
+with open('result.json', 'r', encoding='utf-8-sig') as f:
+    data = json.load(f)
+```
+
+**输出格式因适配器而异**：search 通常返回 dict 列表，note 可能返回 field-value 对列表（如小红书）。使用前先 `print(type(data))` 和 `print(data[0].keys() if isinstance(data, list) else data.keys())` 确认结构，不要假设所有命令输出格式一致。
+
+**URL 中的 & 符号**：PowerShell 中 `&` 是调用运算符，包含 `&` 的 URL 必须用单引号包裹：`opencli xiaohongshu note '<url_with_&>' -f json`
+
 ## 已验证适配器速查
 
 > 完整的 8 平台登录状态、可用命令清单、高价值子版/节点/分类见 [references/verified-platforms.md](references/verified-platforms.md)
 
 | 适配器 | 平台 | 登录状态 | 关键参数/注意事项 | 经验文件 |
 |---|---|---|---|---|
-| `xiaohongshu` | 小红书 | ✅ 已登录 | note/comments/download 均需完整签名 URL；图文笔记正文只有标签，需 download 图片后 Read | [adapter-xiaohongshu.md](references/adapter-xiaohongshu.md) |
+| `xiaohongshu` | 小红书 | ✅ 已登录 | note/comments/download均需完整签名URL（从search结果url字段取，单引号包裹）；note输出field-value列表非dict；comments输出dict列表（与note不同！）；search无id字段需从URL提取；note/comments偶发静默失败(0B空文件)必须检查+重试；图文笔记需download图片后Read | [adapter-xiaohongshu.md](references/adapter-xiaohongshu.md) |
 | `zhihu` | 知乎 | ✅ 已登录 | 深度长文质量高，answer-detail 可获全文；反爬比小红书宽松 | [adapter-zhihu.md](references/adapter-zhihu.md) |
 | `juejin` | 掘金 | ✅ 可用（无需登录） | 只有 hot/recommend，中文技术教程 | [verified-platforms.md](references/verified-platforms.md) |
 | `github` | GitHub | ✅ 已登录 | 适配器只有 whoami；发现项目用 `github-trending` | [verified-platforms.md](references/verified-platforms.md) |
@@ -286,3 +304,9 @@ opencli browser <session> analyze <url>
 - ✅ 明确 content/skill 分层纪律：词典本体（具体词条）属单次任务数据留 research 目录，只有方法论与参数化脚本进 skill
 - ✅ 更新 `research-sop.md` §七衔接词典、`research-scripts.md` 第 8 种模式、`EVOLUTION.md` 归档规则与文件职责表
 - 来源：Agent Harness 领域调研（DSH/Pi/Hermes/Cordis 路线之争），小红书 11 组关键词→58 篇去重→51 篇精读→130+ 词条词典
+
+### 2026-09-14 实战经验回流（小红书命令坑 + 调研前置验证）
+- ✅ SKILL.md 新增"输出处理通用提醒"：PowerShell Out-File 默认 UTF-16 LE BOM→Python 读取必须 utf-8-sig；各命令输出结构不一、用前先验证类型；含 & 的 URL 必须单引号包裹
+- ✅ `adapter-xiaohongshu.md` 固化 5 坑：note 输出 field-value 对列表（非 dict）、comments 输出 dict 列表（与 note 结构不同）、search 无 id 字段需从 URL 提取、download 输出目录固定不可指定、note/comments 偶发 0B 静默失败（批量脚本必须检查文件大小+重试，附 safe_note 防护示例）；签名 URL 取用升级为铁律三条
+- ✅ `research-sop.md` 新增调研前置环节：第 0 步议题理解验证（复述理解+列"不是什么"+拆核心名词层次+确认通用性）、第 0.5 步平台相关性必须实测（禁止凭印象排除平台）、社媒数字只作关注度参考不纳入技术判断、发现高重合开源项目立即转一手资料做架构拆解
+- 来源：小红书两轮实战（25+8 篇精读暴露命令坑；一次方向跑偏的调研沉淀出前置验证方法论）
