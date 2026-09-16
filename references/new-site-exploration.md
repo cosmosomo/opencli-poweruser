@@ -170,4 +170,63 @@ Step 6: 记录经验
 
 ---
 
-*本文件基于官方 opencli-adapter-author skill 的方法论，适配使用者视角。最后更新：2026-09-03*
+## 7. DOM 文本不够时：去 React/Vue props 里挖完整对象（2026-09-17 脉脉实战）
+
+**适用场景**：页面显示的是**截断摘要**（`...` 开头 / CSS `line-clamp`），或列表项没有链接、没有 ID，
+`extract` / DOM 文本抽取拿到的信息明显少于后端实际下发的。
+
+**原理**：SSR + 前端框架 hydration 的页面，完整数据对象往往挂在框架的内部实例上，
+即使 DOM 只渲染了其中一部分。
+
+```js
+// React：16 用 __reactInternalInstance$，17+ 用 __reactFiber$，两种都试
+const key = Object.keys(el).find(k =>
+  k.startsWith('__reactInternalInstance') || k.startsWith('__reactFiber'));
+let node = el[key];
+for (let i = 0; i < 8 && node; i++) {              // 向上回溯 fiber 链
+  const p = node.memoizedProps || node.pendingProps;
+  if (p && p.<目标字段>) return p.<目标字段>;
+  node = node.return;
+}
+// Vue：找 el.__vue__ / el.__vue_app__，或 el.__vnode.props
+```
+
+**脉脉实战收益**：DOM 里只有截断 `summary`，props 里拿到了**全文 `text` + 稳定 `gid`/`egid` + 真实互动数**。
+
+**工程纪律（重要）**：
+1. 框架内部 key **是版本相关的**，必须写**降级分支**——props 取不到时回退纯 DOM 抽取，不要整体失败
+2. 输出里加一列 `source`（`props` / `dom`）标明每行走的哪条路径。
+   **某天全变成 `dom` 就是站点改版的早期告警**，比等报错更早
+3. 探测 props 时**先只取标量字段**（`typeof v` 是 string/number/boolean），
+   直接 `JSON.stringify` 整个 props 会因循环引用报错
+
+**Strategy 归类**：这仍属 `DOM_STATE`（hydration state），contract = `visible-ui`，
+不要因为"看起来像内部数据"就升级成 `PAGE_FETCH`。
+
+---
+
+## 8. 判断"能不能脱离浏览器直连"的标准三步测试（2026-09-17）
+
+在为一个站点设计"导出 cookie/token → 纯 HTTP 客户端直连"架构**之前**，先用这三步证伪，
+**不要先写架构文档**。整套测试 5 分钟，能省掉几天的错误投入。
+
+| 步骤 | 做什么 | 怎么读结果 |
+|---|---|---|
+| ① 裸替换 | 把浏览器完整 cookie 拿到 Node 侧 `fetch` 同一个 URL（带 UA） | 200+数据 → 基本可行；204/403/HTML → 继续 |
+| ② 补齐 XHR 头 | 加 `Origin` / `Referer` / `X-Requested-With` / `sec-fetch-*` / `Accept-Language` | 仍失败 → 不是缺 header 的问题 |
+| ③ CSRF 握手 | 读响应头的 `set-cookie` / `x-csrf-token`，用它重试 | 从"静默空"变成**明确的业务错误码**时，错误码就是答案 |
+
+**脉脉判例**：① 204 → ② 仍 204 → ③ `403 {"error_code":20001,"error_msg":"...此设备已被操作下线..."}`
+→ **会话与设备绑定**，Token 解耦路线证伪，只能走浏览器上下文。
+
+**边界**：这是"能不能复用已有登录态"的可行性判断，到此为止。
+如果结论是站点在做设备/客户端校验，**正确动作是接受它并降级到浏览器上下文**
+（`DOM_STATE` / `UI_SELECTOR` / `PAGE_FETCH`），不是去伪造指纹绕过它。
+
+**另一条经验**：网上的"成熟方案"要先查 star 数和最后更新时间再引用。
+脉脉这次被引用的三个"业界项目"实查为 3 stars/2021、1 star/2026、1 star/2021——
+**仓库真实存在 ≠ 方案可用**。
+
+---
+
+*本文件基于官方 opencli-adapter-author skill 的方法论，适配使用者视角。最后更新：2026-09-17*

@@ -131,7 +131,13 @@ with open('result.json', 'r', encoding='utf-8-sig') as f:
 | `reddit` | Reddit | ✅ 已登录 | AI 编程/找工质量极高，推荐 r/LocalLLaMA 等子版 | [verified-platforms.md](references/verified-platforms.md) |
 | `v2ex` | V2EX | ✅ 已登录 | 国内程序员真实讨论，推荐 programmer/share 节点 | [verified-platforms.md](references/verified-platforms.md) |
 | `linux-do` | linux.do | ✅ 已登录 | whoami 误报 bug，feed/search/topic 正常 | [verified-platforms.md](references/verified-platforms.md) |
-| `boss` | BOSS 直聘 | ⚠️ 只读低频可用 | **反爬根因已查明**：反调试探测 CDP 特征 → 刷新/强制登出；纯自动化长期不可行，详见 [adapter-boss.md](references/adapter-boss.md) | [adapter-boss.md](references/adapter-boss.md) |
+| `boss` | BOSS 直聘 | 🔴 **账号级禁区** | 曾因短时多次触发采集导致**真实投递账号被限约 24 小时**；BOSS 改走人工单次通道，**OpenCLI 侧不做任何自动化** | [job-platforms.md](references/job-platforms.md) §六 |
+| `51job` | 前程无忧 | ✅ 完全可用（免登录） | 求职主力通道；`search` 21 字段可信、薪资已拆 min/max、`encCoId` 可反查公司；⚠️ `detail.title` 与 `company.companyName` 恒为"APP下载"（字段污染），detail 只取 `description` | [job-platforms.md](references/job-platforms.md) §三 |
+| `nowcoder` | 牛客 | ✅ 已登录 | **双通道**：7 条命令零浏览器零登录（jobs/companies/trending/hot/topics/recommend/creators）；面经/薪资/内推需登录。搜公司名有效、搜技术概念词全是 SEO 垃圾 | [job-platforms.md](references/job-platforms.md) §四 |
+| `linkedin` | 领英 | ✅ 已登录 | `search` 是职位搜索，筛选最全（remote/date-posted/经验级别）；⚠️ `people-search` 消耗每月商业使用额度 | [job-platforms.md](references/job-platforms.md) §五 |
+| `indeed` | Indeed | 🟡 半残 | `search` 的 title/salary/tags 全空（选择器漂移）；`job` 撞 Cloudflare | [job-platforms.md](references/job-platforms.md) §五 |
+| `1point3acres` | 一亩三分地 | ⛔ 需登录 bbs | 只有 `search` 走浏览器，`forums/hot/latest/thread` 是 Node 直连**必 403**；登录要登 `/bbs/` 不是 `/home` | [job-platforms.md](references/job-platforms.md) §五 |
+| `maimai` | 脉脉 | ✅ **已自建职言通道** | 内置 3 条命令全废（whoami 恒误报、login 会破坏人工登录、search-talents 是 B 端搜人）；**自建 `search-gossip`（职言全文+gid）和 `quota`（配额探针）已通过官方 verify**。薪资包体情报价值高 | [adapter-maimai.md](references/adapter-maimai.md) |
 | `bilibili` | B站 | ✅ 可用 | 无特殊参数 | [adapter-public-api.md](references/adapter-public-api.md) |
 | `hackernews` / `arxiv` / `wttr` 等 | 公开 API | ✅ 可用 | 无需浏览器 | [adapter-public-api.md](references/adapter-public-api.md) |
 | `doubao` / `chatgpt` / `claude` | AI 工具 | ⚠️ 部分可用 | ChatGPT 因 UI 改版选择器失效 | 见 pitfalls.md |
@@ -144,98 +150,69 @@ with open('result.json', 'r', encoding='utf-8-sig') as f:
 >
 > 首次使用时从 `local/LOCAL.md.example` 复制一份，填入你自己的配置。已通过 `.gitignore` 排除 `local/` 目录。
 
-## 可复用调研工作流
+## 文档导航（按任务找文件）
 
-> 跨平台议题调研的标准流程、关键词策略、平台策略、数据处理流程、工具链经验，见 [references/research-sop.md](references/research-sop.md)
->
-> 调研脚本的可复用模式（8种）、硬编码问题清单、参数化脚本设计规范，见 [references/research-scripts.md](references/research-scripts.md)
->
-> **议题词典方法论**（把关键词从一次性弹药升级为带认知评估、可跨议题复用的词典资产）见 [references/topic-lexicon.md](references/topic-lexicon.md)：认知闭环模型、七栏词典骨架、五维评估（热度/新鲜度/前沿度🔮/本质度⚙️/契合度）、顺藤摸瓜递归与剪枝规则、search/note 配额分配、词典纵向追踪与跨议题迁移、反哺舆情/数据质量/ASR 等其他 SOP。脚本 [scripts/lexicon_scan.py](scripts/lexicon_scan.py)（tags/freq/tier/inventory 四模式，参数化不含议题词）。
->
-> **⚠️ 前沿议题调研第一前提：AI 必须清楚自己并不知道真正的前沿词汇。** 词汇知识截止于训练数据，领域越前沿先验越不可靠——"AI 不认识但语料高频"是最强前沿信号，优先反查+精读；只做一轮搜索等于只拿到 AI 已知的世界。开工先声明盲区，词典每词标 `AI先验: 认识/模糊/不认识`，并警惕"认识但已改名/已过时"陷阱（实例：Code Mode 已改名 PTC Mode）。详见 topic-lexicon.md §一。
->
-> 涵盖：关键词矩阵搜索、递归新词捕获、**议题词典与认知评估（七栏骨架/五维评估/AI 盲区自觉）**、多平台交叉验证、平台适配关键词、批量采集→去重→结构化→分类→总结、点赞/时间质量过滤、OpenCLI 标准采集流程、8 步标准调研 SOP、脚本分层模型、参数化核心脚本设计。
-> 来源：小红书 SDD 253 条笔记、6 大技术渠道核验、Scopus 自动化方案、8 平台登录验证、xhs_search 脚本体系分析等多轮实践总结。
->
-> 站点反爬/反调试识别与应对（CDP 特征暴露点、8 种 DevTools 探测器、降频策略、技术路线评估、已确认站点反爬状态），见 [references/anti-bot-notes.md](references/anti-bot-notes.md)
->
-> 来源：BOSS 直聘反爬 4 轮调研（CSDN/腾讯云/掘金/知乎/V2EX/影刀/GitHub/抖音）+ 小红书限流实测（2026-08-28）。
+> references/ 共 18 份，**分四层**。不确定读哪个时从这张表进，不要凭文件名猜。
 
-> **调研记录规范（强制）**：每次调研必须保存原始数据和过程笔记，避免结果只存在于对话中。见 [references/research-logging.md](references/research-logging.md)
->
-> 核心机制：调研开始时运行 `python scripts/init_research.py "议题名称"` 一键创建目录；搜索结果用 `Tee-Object` 直接存到 `raw/`；过程想法随时追加到 `notes.md`；结束时花 1 分钟填 `README.md` 关键发现。**先存后整理，低摩擦，不需要完美。**
->
-> 脚本：[scripts/init_research.py](scripts/init_research.py)（一键创建调研目录结构和模板）
+### 第一层 · 平台层「这个站点能给我什么」
 
-## 音视频处理工作流
-
-> B站视频下载 + ASR 转写的一键封装，见 [references/bilibili-asr-workflow.md](references/bilibili-asr-workflow.md)
->
-> 脚本：[scripts/bili_asr.py](scripts/bili_asr.py)
->
-> 流程：BV号 → yt-dlp 下载音频(bestaudio/m4a) → faster-whisper ASR → 字幕(srt/vtt/txt/json)
->
-> 关键经验：opencli download 在 Windows 上常报 ENOENT（已通过独立 yt-dlp.exe 解决）且只下视频流无音频；直接用 yt-dlp 只下音频快 3-5 倍；中国网络环境需设 `HF_ENDPOINT=https://hf-mirror.com` + `HF_HUB_DISABLE_XET=1`（脚本已内置）；B站 412 需 cookie（脚本自动从浏览器获取，或用 `--cookies` 指定）。
->
-> 与 bili2rag 互补：本脚本做单视频快速转写，bili2rag 做批量 RAG 语料库构建。
-
-## 探索新站点与新适配器（可进化机制）
-
-> 完整的新站点探索流程见 [references/new-site-exploration.md](references/new-site-exploration.md)：`opencli browser analyze` 一步诊断、5 种 Pattern 分类、6 种 Strategy 稳定性判断、6 步探索流程。
->
-> 数据质量验证见 [references/data-quality-checklist.md](references/data-quality-checklist.md)：11 种静默失败识别、5 步验证法、不同平台特殊检查点。
->
-> 经验记录规范见 [references/site-memory-guide.md](references/site-memory-guide.md)：记录什么、记录到哪里、站点记忆模板、记忆维护。
-
-当用户需求涉及未在速查表中的网站时，按以下流程：
-
-### Step 1: 一步诊断（不要跳过）
-
-```bash
-opencli browser <session> analyze <url>
-```
-
-`analyze` 一步返回：站点 Pattern（A/B/C/D/E）、反爬厂商检测、最近适配器匹配、`api_candidates`（含 `verdict=likely_data/noise/blocked`）、官方建议的下一步。直接按 `recommended_next_step` 走。
-
-### Step 2: 查找已有适配器
-
-1. 运行 `opencli --help` 查找适配器名称（支持模糊匹配）
-2. 看 `analyze` 输出的 `nearest_adapter`：有没有最像的可以直接用或参考
-3. 运行 `opencli <adapter> --help` 查看支持的命令和参数
-
-### Step 3: 探活验证
-
-1. 先用最轻量的只读命令探活（如 `whoami` 或 `search --limit 1`）
-2. 检查登录态：需要登录的平台确认 `whoami` 返回 `logged_in: true`
-3. 检查反爬：频繁调用是否触发限流/验证码
-4. 若遇到错误，查阅 [references/pitfalls.md](references/pitfalls.md) 看是否有已知解决方案
-
-### Step 4: 数据质量验证（关键）
-
-命令能跑通 ≠ 数据正确。按 [references/data-quality-checklist.md](references/data-quality-checklist.md) 验证：
-- 非空检查 → 肉眼比对（抽 1-3 条和网页实际值对比）→ 单位/量级检查 → 字段语义检查 → 编码/URL 检查
-- 11 种静默失败：字段污染、语义分歧、单位混淆、等不够就抓、`|| 0` 兜底、登录态漂移、反爬限流、HTML 实体、URL 不完整、分页不生效、字段缺失
-
-### Step 5: 判断是否需要写新适配器
-
-| 情况 | 解决方案 |
+| 文件 | 何时读 |
 |---|---|
-| 有现成适配器 | 直接用，记录经验 |
-| 站点有公开 API（无需登录） | 直接用 `curl`/Python `requests`，不需要适配器 |
-| 只需要一次性数据 | 用 `opencli browser` 手动操作（open/eval/extract） |
-| 需要长期反复采集 | 参考官方 `opencli-adapter-author` skill 写适配器 |
+| [verified-platforms.md](references/verified-platforms.md) | 查某平台的登录态、命令清单、高价值子版/节点 |
+| [job-platforms.md](references/job-platforms.md) | **求职/招聘采集前必读**：8 个求职适配器状态矩阵、字段可信度、BOSS 禁区、按能力词反查公司 |
+| `adapter-*.md`（[xiaohongshu](references/adapter-xiaohongshu.md) / [zhihu](references/adapter-zhihu.md) / [boss](references/adapter-boss.md) / [maimai](references/adapter-maimai.md) / [public-api](references/adapter-public-api.md)） | 动手用某个具体适配器之前，先读它的卡 |
 
-### Step 6: 记录经验（skill 进化）
+### 第二层 · 通道层「怎么把一个渠道跑通」
 
-验证成功后，按 [references/site-memory-guide.md](references/site-memory-guide.md) 记录：
-- 新建 `references/adapter-<name>.md`：必加参数、反爬策略、可用命令清单、踩坑点、输出字段
-- 更新 `references/verified-platforms.md`：登录状态、可用命令
-- 更新本文件速查表：新增一行
-- 通用踩坑追加到 `references/pitfalls.md`
-- 反爬特征追加到 `references/anti-bot-notes.md`
-- 本机专属信息（profile、目录、工具版本）更新 `LOCAL.md`（不公开）
+| 文件 | 何时读 |
+|---|---|
+| [channel-probing.md](references/channel-probing.md) | **开新渠道第一站**：研发五步、探活阶梯 L0-L4、四种失败鉴别、定级落卡 |
+| [new-site-exploration.md](references/new-site-exploration.md) | 速查表里没有这个站点；评估要不要自建适配器；React props 挖数据法 |
+| [data-quality-checklist.md](references/data-quality-checklist.md) | 命令跑通了，验数据对不对（11 种静默失败） |
+| [anti-bot-notes.md](references/anti-bot-notes.md) | 页面闪烁 / 强制登出 / 连续返回空 |
+| [pitfalls.md](references/pitfalls.md) | **遇到报错先搜这里**（15 条通用坑 + 适配器特定问题） |
+| [site-memory-guide.md](references/site-memory-guide.md) | 任务结束，经验该记到哪个文件 |
 
-**这就是 skill 的进化方式**——每个新站点的探索经验都被结构化沉淀，下次使用时从 30 分钟变成 5 分钟。
+### 第三层 · 方法层「怎么做一场调研」
+
+| 文件 | 何时读 |
+|---|---|
+| [research-sop.md](references/research-sop.md) | 跨平台议题调研的标准流程（含第 0 步议题理解验证、舆情专项、推理决策树） |
+| [topic-lexicon.md](references/topic-lexicon.md) | 把关键词沉淀成可复用词典资产（七栏骨架 / 五维评估 / AI 盲区自觉） |
+| [research-scripts.md](references/research-scripts.md) | 写采集脚本前：8 种可复用模式 + 参数化规范 |
+| [research-logging.md](references/research-logging.md) | 调研过程怎么存（先存后整理） |
+
+### 第四层 · 工作流层「特定产出」
+
+| 文件 | 何时读 |
+|---|---|
+| [bilibili-asr-workflow.md](references/bilibili-asr-workflow.md) | B站视频 → 字幕（yt-dlp + faster-whisper） |
+| [adapters/README.md](adapters/README.md) | 本 skill 自建的适配器源码与安装方法（换机器时复制启用） |
+
+**脚本**：[init_research.py](scripts/init_research.py)（建调研目录）、[lexicon_scan.py](scripts/lexicon_scan.py)（词典扫描 tags/freq/tier/inventory）、[bili_asr.py](scripts/bili_asr.py)（B站转写）
+
+---
+
+## 三条越级铁律（不看文档也必须遵守）
+
+1. **⚠️ 前沿议题：AI 必须清楚自己不知道真正的前沿词汇。** 词汇知识截止于训练数据，
+   "AI 不认识但语料高频"是最强前沿信号。开工先声明盲区，只做一轮搜索 = 只拿到 AI 已知的世界。详见 [topic-lexicon.md](references/topic-lexicon.md) §一
+2. **调研必须留痕**：开始时 `python scripts/init_research.py "议题名"`，搜索结果直接存 `raw/`，
+   结束花 1 分钟填 `README.md`。**结果只存在于对话里 = 没做过。** 详见 [research-logging.md](references/research-logging.md)
+3. **探活不要用 `whoami`**：已有 4 个平台确认误报（linux-do / 小红书 / 脉脉 / 一亩三分地）。
+   用最轻的数据命令探活。详见 [channel-probing.md](references/channel-probing.md) §二
+
+---
+
+## 探索新站点与新适配器
+
+> 完整流程见 [channel-probing.md](references/channel-probing.md)（渠道研发五步 + 探活）
+> 与 [new-site-exploration.md](references/new-site-exploration.md)（Pattern/Strategy 判断 + 要不要自建）。
+>
+> 一句话版本：`opencli browser <sess> analyze <url>` 一步诊断 → 按 `recommended_next_step` 走 →
+> 能力边界判定 → 探活阶梯 → 数据质量 5 步 → 定级落卡。
+> 真要写适配器时参考官方 `opencli-adapter-author` skill（npm 包内 `skills/opencli-adapter-author/`），
+> 本 skill 已按其 Runbook 自建过适配器，样例见 [adapters/](adapters/README.md)。
 
 ## 遇到问题
 
@@ -244,6 +221,10 @@ opencli browser <session> analyze <url>
 3. `Multiple Browser Bridge profiles are connected` → 未指定 profile，加 `--profile v6pz9gjx`（全局参数，放在 opencli 后适配器前）或设 `$env:OPENCLI_PROFILE="v6pz9gjx"`
 4. 命令无响应/卡住 → 检查 daemon 状态，必要时重启
 5. 输出格式异常 → 确认加了 `-f json`，部分适配器默认输出非标准格式
+6. **手动登录时页面被反复导走 / "刚登录又自动退掉"** → 不是站点风控，是 `<site> login` 的轮询每 2 秒 `page.goto`。
+   该站点人工登录期间**禁止执行它的任何 opencli 命令**（whoami 也不行），登完再单独验证。判断方法见 pitfalls.md §14
+7. `命令 | python -c "..."` 报 `IndentationError` 且错误内容是 `|| goto :error` → Windows .cmd shim 坑，
+   改成先落盘再解析或用 `node -e`；Git Bash 里 python 打印中文加 `PYTHONIOENCODING=utf-8`，见 pitfalls.md §15
 
 ## 自迭代与经验沉淀
 
@@ -255,58 +236,5 @@ opencli browser <session> analyze <url>
 
 ## 进化日志
 
-新适配器的验证记录追加在 [references/pitfalls.md](references/pitfalls.md) 末尾。
-每次成功验证新适配器后，更新本文件的"已验证适配器速查"表并创建对应 reference 文件。
-
-### 2026-08-27 跨平台调研 SOP 整合
-- ✅ 整合多轮调研实践经验（小红书 SDD 253 条笔记、6 大技术渠道核验、Scopus 自动化方案、8 平台登录验证）
-- ✅ 创建 `references/research-sop.md`：关键词策略（4条）、平台策略（2条）、数据处理流程（2条）、工具链经验（2条）、8步标准调研SOP
-- ✅ SKILL.md 新增"可复用调研工作流"章节，注册 research-sop.md
-
-### 2026-08-27 调研脚本体系分析与参数化设计规范
-- ✅ 分析 xhs_search 项目 ~15 个 PS1 脚本体系（搜索层/读取层/处理层三层模型）
-- ✅ 提炼 7 种可复用代码模式（关键词矩阵批量搜索、JSON清洗、多批去重合并、新内容识别、关键词规则自动分类、详情批量读取、Markdown报告生成）
-- ✅ 梳理 9 类硬编码问题清单（路径/关键词/分类规则/目标列表/单平台绑定/无参数化/无错误处理/无进度追踪/无配置文件）
-- ✅ 制定参数化脚本设计规范（2个核心脚本、7条设计原则、平台字段映射）
-- ✅ 创建 `references/research-scripts.md`，核心判断：方法论价值高，代码复用价值低；不建议原封不动塞硬编码脚本
-- ✅ SKILL.md "可复用调研工作流"章节追加 research-scripts.md 引用
-
-### 2026-09-03 舆情/风评调研专项经验沉淀
-- ✅ AI 办公三产品（豆包/WorkBuddy/千问）真实风评调研实战：小红书 13 篇 + 知乎 2 篇 + 通用搜索 8 篇
-- ✅ 新建 `references/adapter-zhihu.md`：zhihu 适配器首次实战经验（search/answer-detail 字段、answer ID 提取、反爬评估、与小红书互补关系）
-- ✅ 更新 `references/adapter-xiaohongshu.md`：新增"舆情/风评调研场景经验"章节（负面词关键词策略、高赞筛选、评论区挖掘、反爬节奏验证：note/comments 远低于 search）
-- ✅ 更新 `references/research-sop.md`：新增"六、舆情/风评调研专项 SOP"（与普通调研的 7 维区别、8 步标准流程、平台分工与反爬节奏、信源 5 级分级、正负向归类方法、完整实战案例）
-- ✅ SKILL.md 速查表：zhihu 适配器经验文件从 verified-platforms.md 改为 adapter-zhihu.md
-- 关键发现：负面词命中率比中性词高 3-5 倍；小红书 note/comments 可 5-10 秒连续调用（search 需 30 秒）；知乎 answer-detail 一次拿完整 Markdown 正文效率最高；评论区"我也是"+替代方案是风评调研金矿
-
-### 2026-09-01 小红书图文笔记处理 SOP 与调研效率优化
-- ✅ 滨寿司调研实战：3 组关键词 → 精读 7 篇正文 + 2 篇图片红黑榜（10 张图）+ 2 篇评论区 → 产出 47 款菜品四档分级
-- ✅ 确认 `comments` 和 `download` 命令同样需要完整签名 URL（此前只记录了 note）
-- ✅ 沉淀图片型笔记处理 SOP：content 只有标签 → 立即 download → 并行 Read（thumbnail_size=large）→ 封面图优先
-- ✅ 沉淀 download 输出过滤技巧（Select-String 过滤进度条，避免 token 浪费）
-- ✅ 沉淀评论区读取策略（只读 >5000 赞高赞笔记，用于发现争议款和补充推荐）
-- ✅ 沉淀调研工作流优化（关键词矩阵、先筛选再精读、交叉验证定置信度、复用原生四档分类）
-- ✅ 更新 `references/adapter-xiaohongshu.md`：新增"命令参数补遗""图片型笔记处理 SOP""评论区读取策略""调研工作流优化""本次调研效率数据"5 个章节
-- ✅ 更新 SKILL.md 速查表：小红书关键参数从"`note` 需完整签名 URL"更新为"note/comments/download 均需完整签名 URL；图文笔记需 download 图片后 Read"
-
-### 2026-09-03 官方 adapter-author 方法论整合 + 新站点探索体系
-- ✅ 深度调研官方 `opencli-adapter-author` skill（12 步 Runbook + 6 种 Strategy 契约模型 + 14 个 references + 站点记忆机制）
-- ✅ 明确本 skill 定位：使用者视角（跨平台调研/数据采集/工作流编排），与官方作者视角互补
-- ✅ 创建 `references/new-site-exploration.md`：`opencli browser analyze` 一步诊断、5 种 Pattern 分类、6 种 Strategy 稳定性判断（fix 频率 1.18 vs 8.41/year）、6 步探索流程、写适配器时参考官方 skill
-- ✅ 创建 `references/data-quality-checklist.md`：11 种静默失败识别（使用者视角）、5 步验证法、不同平台特殊检查点、数据质量速查表
-- ✅ 创建 `references/site-memory-guide.md`：记录什么/记录到哪里、站点记忆模板（adapter/平台/进化日志）、OpenCLI 本地记忆与 skill 记忆的分工、记忆维护
-- ✅ SKILL.md 新增"本 skill 的定位与独特价值"章节，明确 8 大优势
-- ✅ SKILL.md "探索新适配器"章节扩展为 6 步流程，引用 3 个新 reference
-
-### 2026-09-12 议题词典方法论沉淀（Agent Harness 领域调研驱动）
-- ✅ 创建 `references/topic-lexicon.md`：认知闭环模型（脑中词表→探针→捕获陌生词→立体认知→再摸瓜）、**AI 前沿盲区自觉（硬规则：AI 不认识但语料高频=最强前沿信号，开工先声明盲区，每词标 AI先验，强制跑第二轮反查）**、七栏词典骨架、五维评估（热度/新鲜度/前沿度🔮/本质度⚙️/契合度）+ 升降级判据、顺藤摸瓜递归与剪枝规则、🔥search/❄️note 配额分配、词典纵向追踪（议题雷达）与跨议题迁移、反哺舆情/数据质量/ASR/招聘等 SOP
-- ✅ 创建 `scripts/lexicon_scan.py`：参数化词典扫描器（tags/freq/tier/inventory 四模式，不含议题专属词），内置 read_json（BOM 三级嗅探）与 flatten（note 摊平结构）两个踩坑工具函数；已用本次 58 篇/51 精读真实数据验证 tags（160 标签）、inventory（58 去重）、tier（分层+AI先验标注）全部通过
-- ✅ 明确 content/skill 分层纪律：词典本体（具体词条）属单次任务数据留 research 目录，只有方法论与参数化脚本进 skill
-- ✅ 更新 `research-sop.md` §七衔接词典、`research-scripts.md` 第 8 种模式、`EVOLUTION.md` 归档规则与文件职责表
-- 来源：Agent Harness 领域调研（DSH/Pi/Hermes/Cordis 路线之争），小红书 11 组关键词→58 篇去重→51 篇精读→130+ 词条词典
-
-### 2026-09-14 实战经验回流（小红书命令坑 + 调研前置验证）
-- ✅ SKILL.md 新增"输出处理通用提醒"：PowerShell Out-File 默认 UTF-16 LE BOM→Python 读取必须 utf-8-sig；各命令输出结构不一、用前先验证类型；含 & 的 URL 必须单引号包裹
-- ✅ `adapter-xiaohongshu.md` 固化 5 坑：note 输出 field-value 对列表（非 dict）、comments 输出 dict 列表（与 note 结构不同）、search 无 id 字段需从 URL 提取、download 输出目录固定不可指定、note/comments 偶发 0B 静默失败（批量脚本必须检查文件大小+重试，附 safe_note 防护示例）；签名 URL 取用升级为铁律三条
-- ✅ `research-sop.md` 新增调研前置环节：第 0 步议题理解验证（复述理解+列"不是什么"+拆核心名词层次+确认通用性）、第 0.5 步平台相关性必须实测（禁止凭印象排除平台）、社媒数字只作关注度参考不纳入技术判断、发现高重合开源项目立即转一手资料做架构拆解
-- 来源：小红书两轮实战（25+8 篇精读暴露命令坑；一次方向跑偏的调研沉淀出前置验证方法论）
+> 已移出本文件，见 [CHANGELOG.md](CHANGELOG.md)（skill 层面变更）
+> 与 [references/pitfalls.md](references/pitfalls.md) 的进化日志节（单适配器验证记录）。

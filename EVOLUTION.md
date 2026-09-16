@@ -49,6 +49,7 @@
 | **议题词典本体（具体词条）** | ❌ 不进 skill | 属 content 层单次任务数据，留在 `research/<日期>-<议题>/` |
 | 脚本/工具链模式 | `references/research-scripts.md` | 追加可复用模式或参数化设计 |
 | 反爬/反调试 | `references/anti-bot-notes.md` | 追加站点反爬特征和应对策略 |
+| **渠道研发/探活经验** | `references/channel-probing.md` | 探活阶梯、失败鉴别、定级规则；**探活类经验一律进这里，不要散进各 adapter 卡** |
 | 新站点探索经验 | `references/new-site-exploration.md` | 追加 Pattern/Strategy 判断、analyze 输出解读、探索流程优化 |
 | 数据质量问题 | `references/data-quality-checklist.md` | 追加新的静默失败模式、验证方法、平台特殊检查点 |
 | 站点记忆规范 | `references/site-memory-guide.md` | 更新记录模板、维护规则、记忆结构 |
@@ -107,14 +108,14 @@ SKILL.md 是 skill 的入口和速查表，不是所有细节都往里写。更�
 
 | 事件 | SKILL.md 操作 |
 |---|---|
-| 新适配器验证成功 | 速查表新增一行 + 进化日志追加记录 |
+| 新适配器验证成功 | 速查表新增一行 + **CHANGELOG.md** 追加记录（不要写进 SKILL.md） |
 | 新方法论沉淀（新建 reference） | "可复用调研工作流"章节追加引用 + 进化日志 |
 | 重要通用踩坑（影响所有适配器） | "遇到问题"章节追加 + pitfalls.md 详细记录 |
 | 安装配置流程变化 | "前置检查"或"安装与初始配置"章节更新 + SETUP.md 同步 |
 | 本机环境变化（profile、工具版本） | **只更新 LOCAL.md**，不更新 SKILL.md |
 | reference 文件内容更新（非新增） | SKILL.md 无需改动，进化日志可选记录 |
 
-**进化日志格式**（追加在 SKILL.md 末尾）：
+**进化日志格式**（追加在 **`CHANGELOG.md`** —— 2026-09-17 起已从 SKILL.md 移出，入口文件不再承载日志）：
 
 ```markdown
 ### YYYY-MM-DD <事件简述>
@@ -163,6 +164,10 @@ SKILL.md 是 skill 的入口和速查表，不是所有细节都往里写。更�
 | `scripts/lexicon_scan.py` | 议题词典扫描（tags/freq/tier/inventory 四模式，参数化无议题词） | 模式扩展、bug 修复 |
 | `references/research-scripts.md` | 脚本/工具链可复用模式 | 新模式、参数化设计更新 |
 | `references/anti-bot-notes.md` | 反爬/反调试识别与应对 | 新站点反爬特征、新应对策略 |
+| `CHANGELOG.md` | skill 层面变更时间线（2026-09-17 从 SKILL.md 移出） | 每次能力变更 / 新 reference / 速查表状态位变化 |
+| `references/channel-probing.md` | 渠道研发五步 + 探活阶梯 L0-L4 + 四种失败鉴别 + 定级 | 新的探活手法、新的 whoami 误报案例 |
+| `references/job-platforms.md` | 求职平台专项矩阵（适配器状态 / 字段可信度 / 禁区） | 求职类平台状态或字段变化 |
+| `adapters/` | 本 skill 自建适配器源码（跨机复用） | 自建或修改适配器后同步一份 |
 | `references/new-site-exploration.md` | 新站点探索指南（analyze/Pattern/Strategy/6步流程） | 新站点探索经验、Pattern/Strategy 判断优化 |
 | `references/data-quality-checklist.md` | 数据质量检查清单（11种静默失败） | 新的数据质量问题、验证方法 |
 | `references/site-memory-guide.md` | 站点记忆指南（记录规范/模板/维护） | 记忆结构调整、记录规范更新 |

@@ -161,6 +161,63 @@ subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="re
 
 **解决**：解析时先摊平 `{i["field"]: i["value"]}` 再取字段；不要按 dict 或嵌套结构假设。
 
+### 14. `<site> login` 的轮询会把你正在输入的登录页导走（2026-09-17 源码级确证，通用）
+
+**现象**：用户在浏览器里手动登录某站点，输到一半页面被刷回首页；或 `opencli <site> login` 跑着跑着，
+用户"刚登录又自动退掉"。容易被误判为站点风控熔断。
+
+**根因**：`clis/_shared/site-auth.js` 的 login 循环每 2 秒调一次该站点注册的 `poll` 函数：
+```js
+await page.goto(config.loginUrl);
+while (Date.now() < deadline) {
+  await page.wait(2);
+  const identity = await tryProbe(config, page, 'poll');   // ← 每 2 秒
+}
+```
+**如果这个站点的 poll 函数第一行是 `page.goto(...)`，就会每 2 秒把当前页面导航一次**，
+直接打断人工登录流程。脉脉是已确认的案例（`clis/maimai/auth.js:29-31`），
+因为它的登录信号是服务端内联渲染的 `userObj = JSON.parse('{...}')`，不重新加载页面就读不到。
+
+**判断方法**：读 `clis/<site>/auth.js`，看注册给 `poll:` 的函数第一行是不是 `page.goto`。
+
+**解决**：
+1. 这类站点**不要用 `opencli <site> login`**；
+2. 人工在 Chrome 里登录，**期间不执行该站点的任何 opencli 命令**（whoami 也不行，它同样会 goto）；
+3. 登录完成后再单独跑一次 `whoami` 验证。
+
+**教训**：把"登录态掉线"归因给站点风控之前，先读适配器源码看是不是自己把页面冲掉了。
+源码里能读到的确定解释，优先于反爬推测。
+
+### 15. Git Bash 里 `命令 | python -c "..."` 会被 .cmd shim 搅坏（2026-09-16 实测，Windows）
+
+**现象**：`opencli ... -f json | python -c "import json,sys; ..."` 报
+`IndentationError: unexpected indent`，错误行内容却是 `|| goto :error`——明显是批处理文件的内容被喂给了 python。
+
+**原因**：Windows 上 `opencli` / 部分 `python` 是 `.cmd` 批处理 shim，管道 + `-c` 多行脚本组合时参数被 cmd 重新解析。
+
+**解决**（任选）：
+- **先落盘再解析**：`opencli ... -f json > out.json` 然后 `python - out.json <<'EOF' ... EOF`（heredoc 传脚本、文件传数据）
+- **改用 `node -e`**：实测不受影响
+- 另外，Git Bash 里 python 打印中文会乱码（stdout 编码），验数据时加 `PYTHONIOENCODING=utf-8 PYTHONUTF8=1`，
+  否则会把**显示层乱码误判成数据层乱码**（已踩过：51job JD 正文实际是完好 UTF-8）
+
+### 16. git / curl 网络操作在 Bash 工具里 TLS 握手失败，改用 PowerShell（2026-09-17 实测）
+
+**现象**：同一台机器、同一时刻——
+- Bash 工具里：`git push` 报 `TLS connect error: error:0A000126:SSL routines::unexpected eof while reading`；
+  `curl https://github.com/` 报 `schannel: failed to receive handshake`。加不加代理、开不开沙箱都一样
+- PowerShell 工具里：设 `$env:HTTP_PROXY/$env:HTTPS_PROXY="http://127.0.0.1:7897"` 后 `git push` **一次成功**
+
+**注意**：Bash 侧 `HTTPS_PROXY` 环境变量**本来就是设好的**，所以差异不只是代理变量，
+而是两个工具走的 TLS 栈不同（Bash 侧 curl 报的是 schannel，Windows 原生 TLS）。根因未深究。
+
+**解决**：**凡是 git 的网络操作（push / pull / clone / fetch origin）一律用 PowerShell 工具执行**，
+命令前显式带上代理变量。Bash 只用于本地 git 操作（status/diff/commit/本地路径 fetch）。
+
+**连带经验**：本地路径可以当远程用——`git -C <copy> pull --ff-only <canonical-path> HEAD`
+可以在完全离线的情况下同步多个副本，不必等 origin 可达。
+先用 `git merge-base --is-ancestor A B` 确认是纯快进再做。
+
 ## 适配器特定问题
 
 ### ChatGPT 适配器（UI 改版导致选择器失效）
@@ -185,6 +242,85 @@ subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="re
 **现象**：`doubao whoami` 返回 `AUTH_REQUIRED: passport_csrf_token cookie missing`。
 
 **解决**：在 Chrome 中登录 doubao.com。
+
+### 一亩三分地 1point3acres（站点迁移新版前端，2026-09-16 实测）
+
+**状态**：适配器失效，上游未跟进（#2145 修复被站点迁移超越）；浏览器通道可用
+
+**现象**：
+- `whoami`：已登录（`_auth` cookie 存在，HttpOnly）仍报 `AUTH_REQUIRED: bbs rendered but no logged-in identity`
+- `forum`（公开策略）：打旧端点 `/bbs/forum-*.html` 返回 403
+- `search`：登录闸门复用同一失效检测 → AUTH_REQUIRED
+
+**原因**：站点从 Discuz BBS 迁移到新版 `/home` 前端，旧 `/bbs/` URL 重定向到 `/home`；v1.8.7 依赖的旧标记 `#um` / `#g_upmine` / `a[title="访问我的空间"]` / `.vwmy a` / `a.username` 在新版页面全部不存在。
+
+**新版登录态锚点（实测）**：`img[src*="avatar.1p3a.com"]`（仅登录态渲染，路径含 Discuz 目录散列可反推 uid）。
+
+**浏览器通道（已验证可用）**：`opencli browser <session> open "https://www.1point3acres.com/home/forum/<fid>"` + eval 抽取帖子（标题 + `/home/thread/<id>` 链接）；搜索页 `/home/search?q=<kw>` 加载正常但结果需搜索框交互后异步渲染。
+
+> **2026-09-17 独立复现**：另一环境同日实测完全一致——`forums`（Node 直连）匿名/登录均 403，`whoami` 报
+> `bbs rendered but no #um identity — anonymous or shape drifted`，`search` 报 AUTH_REQUIRED。
+> **补充定位**：`digest/forum/forums/hot/latest/thread/user` 全是 `browser:false`（Node 直连，必 403），
+> **唯一走浏览器的只读命令是 `search`**。用户若只登录新版 `/home` 仍不够，适配器查的是 `/bbs/` 侧身份。
+
+### 脉脉 maimai（三处故障，2026-09-16 实测）
+
+> ⚠️ **本节结论已被 2026-09-17 的实测部分推翻，见文末「结论更新」。技术细节仍有效，保留。**
+
+**状态（2026-09-16 判定）**：不可用；判定不值得投入（求职侧）
+
+**现象**：
+1. `whoami`：已登录（cookie `u`/`u.sig`/`session` 存在）仍报 `AUTH_REQUIRED: Maimai userObj missing from page`——旧版页面内联 `userObj = JSON.parse(...)` 脚本已不再注入（上游 #1876 中作者自认该方案为待确认 best-effort）
+2. `search-talents`：报 `UNKNOWN: page.waitForTimeout is not a function`——`clis/maimai/search-talents.js:55` 用了桥接 page 对象不存在的方法；其余适配器统一用 `page.wait(秒)`。**修复建议：改 `await page.wait(5);`**
+3. `search-talents` 目标页 `maimai.cn/ent/talents/discover/search_v2` 无招聘端权限时重定向 `/platform/login`；且适配器读取的 `csrftoken` cookie 现为 `n_csrf_token`（名称漂移）
+
+**额外风险**：自动探测招聘端专属页疑似触发华为云 WAF 风控，登录会话被踢（`u` cookie 消失、页面回退"登录/注册"）。
+
+**2026-09-16 修复实测（本地 v1.8.7）**：
+- 登录态实测确认：v6pz9gjx 浏览器内已登录；`whoami` 报 `AUTH_REQUIRED (anonymous)` 为适配器误报（userObj 检测过时）
+- 本地修复两处后重测：`page.waitForTimeout(5000)`→`page.wait(5)` 生效；`csrftoken`→`n_csrf_token` 生效（fetch 可发出）。升级后若被覆盖需重打
+- 但 fetch 返回 401/403 → **个人账号无脉脉企业招聘端权限**，search_v2 页面被重定向、API 拒绝。这是账号权限边界，非代码 bug
+
+#### 🔄 结论更新（2026-09-17，另一环境实测）
+
+上面"maimai 对求职侧确认不可用"的定论**只对官方内置的三条命令成立**，对站点本身不成立：
+
+- **职言（C 端内容）通道已打通**：`https://maimai.cn/web/search_center?type=gossip&query=<kw>` 是登录态下可直读的
+  老版 SSR 页，已据此自建 `maimai search-gossip`（返回帖子**全文** + 稳定 `gid`）并通过官方
+  `verify --strict-memory`。详见 [adapter-maimai.md](adapter-maimai.md)
+- **掉线真凶另有其人**：不是 WAF，而是 `_shared/site-auth.js` 的 login 轮询每 2 秒调 poll，
+  而脉脉的 poll 第一行就是 `page.goto('https://maimai.cn/')`——把人工登录页反复导走。见本文件 §14
+- **Token 解耦路线已证伪**：浏览器 cookie 拿到 Node 侧直连 → 204 →补全 XHR 头仍 204 →
+  CSRF 握手后 `403 error_code 20001「此设备已被操作下线」`＝会话与设备绑定
+- ⚠️ **待核对分歧**：上文称 cookie 名漂移为 `n_csrf_token`；2026-09-17 实测服务器响应头会主动
+  `set-cookie: csrftoken=...; httponly` 并回 `x-csrf-token`。两者可能同时存在（`document.cookie` 看不到 HttpOnly 的那个，
+  但适配器走 CDP `page.getCookies()` 能看到）。**谁对未最终确认**，改适配器前先实测一次 `page.getCookies()`
+
+### 活动行 huodongxing（限流 busy 页，2026-09-16 实测）
+
+**状态**：v1.8.7 已修复识别（上游 #2103），限流触发后需长冷却
+
+**现象**：`events` 命中 busy 页（页面文案「当前访问人数过多，请休息片刻重试 / ERROR CODE: ...」）
+- v1.8.6：误报 `EMPTY_RESULT`（适配器不识别该文案）
+- v1.8.7：正确报 `COMMAND_EXEC: temporary busy/access page`，并自动从同一会话重试一次
+
+**经验**：多次连续探测会累积触发 IP 限流（本机 4 次探测后持续限流）；触发后冷却以小时计；保持低频使用。
+
+### BOSS直聘（v1.8.7 恢复技术可用，但本机仍为账号级禁区）
+
+**技术层面（2026-09-16 实测）**：v1.8.7 含 fix #2291（restore read-only job search/detail）+ #2198
+（probe current geek jobs route）后，`search` 恢复正常，实测"光谱"返回完整字段。
+
+**⚠️ 但本机策略层面（2026-09-17）：仍是禁区，且优先级高于"技术可用"这一事实。**
+2026-08-15 因短时多次触发采集任务，**真实求职账号被限制访问 24 小时**。
+BOSS 数据改走**人工单次通道**，**OpenCLI 侧不做任何自动化**——
+两者共用同一套浏览器指纹与登录态。详见 [job-platforms.md](job-platforms.md) §六。
+
+> 合并说明：这两条不矛盾——"适配器能跑"与"该不该用它跑"是两个问题。账号风险优先。
+
+> **版本提示（2026-09-17 收尾更新）**：本机已从 1.8.6 升级到 **v1.8.7**，上述标注 v1.8.7 的修复结论现已成立。
+> 但 §8（`daemon start` 不存在）等标注 v1.8.6 的条目属历史记录，保留以便回溯。
+> **升级后必做**：自建适配器在 `~/.opencli/clis/` 不受升级影响，但**对官方适配器的本地修改会被覆盖**（如脉脉 `page.wait` / `n_csrf_token` 两处补丁），需重打。
 
 ## 进化日志
 
@@ -264,7 +400,7 @@ subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8", errors="re
 
 - ✅ 新环境部署：千问工作助理（Windows）SkillImport 安装本 skill 成功；opencli v1.8.6 全局可用，daemon restart 拉起，profile v6pz9gjx 桥接正常
 - ✅ 单平台批量采集实测：11 组关键词（6 组命中）→ 58 篇去重 → **51 篇 note 全文精读零风控**（7s 间隔）——再次验证 note 通道远比 search 宽松，"先攒 search 列表、后批量精读"策略成立
-- ✅ 调研成果：Agent Harness 领域（DSH/Pi/Hermes/Cordis 路线之争）关键词图谱+路线分析报告，存调研目录 `research/2026-09-12-agent-harness/`
+- ✅ 调研成果：Agent Harness 领域（DSH/Pi/Hermes/Cordis 路线之争）关键词图谱+路线分析报告，存 `E:\program\GIT\media\research\2026-09-12-agent-harness\`
 - ⚠️ 本次踩坑 6 条已固化为本文件通用问题 §8-§13：daemon 无 start / 无 --timeout / whoami 走 creator 站点（探活用 feed）/ Python 调 .cmd shim 截断签名 URL（node 直调 main.js）/ Tee-Object UTF-16 编码坑 / note 输出 field-value 摊平结构
 - ⚠️ search 累积限流复现：第 6 词后 OpenClaw/harness论文/harness对比/上下文工程 四连空数组（feed 探活正常），与 §6 长会话累积限流模式一致；本次靠"转 note 精读"完成调研，未硬等冷却
 - 📝 待办：`OpenClaw`、`上下文工程` 两个关键词在冷却充分后补跑
