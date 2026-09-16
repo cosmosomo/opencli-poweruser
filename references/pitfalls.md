@@ -334,7 +334,7 @@ BOSS 数据改走**人工单次通道**，**OpenCLI 侧不做任何自动化**�
 
 ### 2026-08-20 系统全局安装
 
-- ✅ OpenCLI 全局安装到 `C:\Users\COLORFIRE\AppData\Roaming\npm`，任意终端可调用
+- ✅ OpenCLI 全局安装到 npm 全局目录（Windows 为 `%APPDATA%\npm`），任意终端可调用
 - ✅ 验证系统全局 opencli 可连接已有 daemon（端口 19825）
 
 ### 2026-08-21 浏览器后台运行方案调研
