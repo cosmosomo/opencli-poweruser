@@ -230,7 +230,7 @@ def safe_note(url, output_path, max_retries=2):
    ```
 4. **并行 Read 图片**：Read 工具支持并行调用，一次读 3~4 张。`thumbnail_size=large` 足够看清菜品文字和价格，不需要 full。
 5. **封面图优先**：多图笔记第 1 张通常是汇总页（直接列出全部推荐项+价格+评分），先读封面判断价值，再决定是否读完全部。
-6. 图片路径：`E:\program\media\xiaohongshu-downloads\<note-id>\<note-id>_N.jpg`
+6. 图片路径：`<你的下载目录>\xiaohongshu-downloads\<note-id>\<note-id>_N.jpg`
 
 ## 评论区读取策略（2026-09-01 新增）
 

@@ -362,7 +362,7 @@ BOSS 数据改走**人工单次通道**，**OpenCLI 侧不做任何自动化**�
   - 小红书 ✅（COSMOS，17粉）
   - 知乎 ✅（wjsnbb）
   - 掘金 ✅（无需登录，hot/recommend 公开）
-  - GitHub ✅（cosmosomom）
+  - GitHub ✅（已登录）
   - Reddit ✅（Intrepid_Ad3831，2021年注册）
   - V2EX ✅（cosmostxy）
   - linux.do ✅（已登录，feed 正常）
@@ -400,7 +400,7 @@ BOSS 数据改走**人工单次通道**，**OpenCLI 侧不做任何自动化**�
 
 - ✅ 新环境部署：千问工作助理（Windows）SkillImport 安装本 skill 成功；opencli v1.8.6 全局可用，daemon restart 拉起，profile v6pz9gjx 桥接正常
 - ✅ 单平台批量采集实测：11 组关键词（6 组命中）→ 58 篇去重 → **51 篇 note 全文精读零风控**（7s 间隔）——再次验证 note 通道远比 search 宽松，"先攒 search 列表、后批量精读"策略成立
-- ✅ 调研成果：Agent Harness 领域（DSH/Pi/Hermes/Cordis 路线之争）关键词图谱+路线分析报告，存 `E:\program\GIT\media\research\2026-09-12-agent-harness\`
+- ✅ 调研成果：Agent Harness 领域（DSH/Pi/Hermes/Cordis 路线之争）关键词图谱+路线分析报告，存本地调研目录（`research/<日期>-<议题>/`）
 - ⚠️ 本次踩坑 6 条已固化为本文件通用问题 §8-§13：daemon 无 start / 无 --timeout / whoami 走 creator 站点（探活用 feed）/ Python 调 .cmd shim 截断签名 URL（node 直调 main.js）/ Tee-Object UTF-16 编码坑 / note 输出 field-value 摊平结构
 - ⚠️ search 累积限流复现：第 6 词后 OpenClaw/harness论文/harness对比/上下文工程 四连空数组（feed 探活正常），与 §6 长会话累积限流模式一致；本次靠"转 note 精读"完成调研，未硬等冷却
 - 📝 待办：`OpenClaw`、`上下文工程` 两个关键词在冷却充分后补跑
