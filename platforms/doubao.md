@@ -41,7 +41,7 @@ notepad local\LOCAL.md
 
 ```powershell
 npm install -g @jackwener/opencli
-opencli daemon start
+opencli daemon restart   # 没有 daemon start 子命令
 ```
 
 ### 5. 验证

@@ -41,8 +41,8 @@ description: >-
 - `Extension: connected`（浏览器扩展已连接）
 - 记下你的 profile ID（如 `v6pz9gjx`），后续命令需要用到
 
-若 daemon 未运行，运行 `opencli daemon start`。
-若扩展未连接，在 Chrome 中确认扩展已启用并打开目标网站。
+若 daemon 未运行，运行 `opencli daemon restart`（**没有 `daemon start` 子命令**，只有 restart / status / stop；`opencli daemon status` 本身也会顺带把 daemon 拉起来）。
+若扩展未连接（或扩展弹窗卡在 `Reconnecting...`），**先看 daemon 在不在跑**——这是最常见的唯一根因，daemon 一回来扩展约 4 秒自动重连；daemon 正常才去 Chrome 里查扩展是否启用。
 
 ## 环境配置
 
@@ -127,9 +127,9 @@ with open('result.json', 'r', encoding='utf-8-sig') as f:
 | `xiaohongshu` | 小红书 | ✅ 已登录 | note/comments/download均需完整签名URL（从search结果url字段取，单引号包裹）；note输出field-value列表非dict；comments输出dict列表（与note不同！）；search无id字段需从URL提取；note/comments偶发静默失败(0B空文件)必须检查+重试；图文笔记需download图片后Read | [adapter-xiaohongshu.md](references/adapter-xiaohongshu.md) |
 | `zhihu` | 知乎 | ✅ 已登录 | 深度长文质量高，answer-detail 可获全文；反爬比小红书宽松 | [adapter-zhihu.md](references/adapter-zhihu.md) |
 | `juejin` | 掘金 | ✅ 可用（无需登录） | 只有 hot/recommend，中文技术教程 | [verified-platforms.md](references/verified-platforms.md) |
-| `github` | GitHub | ✅ 已登录 | 适配器只有 whoami；发现项目用 `github-trending` | [verified-platforms.md](references/verified-platforms.md) |
-| `reddit` | Reddit | ✅ 已登录 | AI 编程/找工质量极高，推荐 r/LocalLLaMA 等子版 | [verified-platforms.md](references/verified-platforms.md) |
-| `v2ex` | V2EX | ✅ 已登录 | 国内程序员真实讨论，推荐 programmer/share 节点 | [verified-platforms.md](references/verified-platforms.md) |
+| `github` | GitHub | ✅ 已登录 | 适配器只有 whoami；发现项目用 `github-trending`；⚠️ Python urllib 中文搜索需 URL encode | [adapter-github.md](references/adapter-github.md) |
+| `reddit` | Reddit | ✅ 已登录 | AI 编程/找工质量极高；`read` 可同时拿帖+评论（无独立 comments 命令）；r/resumes 专家反馈质量高 | [adapter-reddit.md](references/adapter-reddit.md) |
+| `v2ex` | V2EX | ✅ 已登录 | ⚠️ **无 search 命令**，只能按节点泛读（jobs/programmer/share）；jobs 节点以社招远程岗为主，校招密度低 | [adapter-v2ex.md](references/adapter-v2ex.md) |
 | `linux-do` | linux.do | ✅ 已登录 | whoami 误报 bug，feed/search/topic 正常 | [verified-platforms.md](references/verified-platforms.md) |
 | `boss` | BOSS 直聘 | 🔴 **账号级禁区** | 曾因短时多次触发采集导致**真实投递账号被限约 24 小时**；BOSS 改走人工单次通道，**OpenCLI 侧不做任何自动化** | [job-platforms.md](references/job-platforms.md) §六 |
 | `51job` | 前程无忧 | ✅ 完全可用（免登录） | 求职主力通道；`search` 21 字段可信、薪资已拆 min/max、`encCoId` 可反查公司；⚠️ `detail.title` 与 `company.companyName` 恒为"APP下载"（字段污染），detail 只取 `description` | [job-platforms.md](references/job-platforms.md) §三 |
@@ -138,9 +138,10 @@ with open('result.json', 'r', encoding='utf-8-sig') as f:
 | `indeed` | Indeed | 🟡 半残 | `search` 的 title/salary/tags 全空（选择器漂移）；`job` 撞 Cloudflare | [job-platforms.md](references/job-platforms.md) §五 |
 | `1point3acres` | 一亩三分地 | ⛔ 需登录 bbs | 只有 `search` 走浏览器，`forums/hot/latest/thread` 是 Node 直连**必 403**；登录要登 `/bbs/` 不是 `/home` | [job-platforms.md](references/job-platforms.md) §五 |
 | `maimai` | 脉脉 | ✅ **已自建职言通道** | 内置 3 条命令全废（whoami 恒误报、login 会破坏人工登录、search-talents 是 B 端搜人）；**自建 `search-gossip`（职言全文+gid）和 `quota`（配额探针）已通过官方 verify**。薪资包体情报价值高 | [adapter-maimai.md](references/adapter-maimai.md) |
-| `bilibili` | B站 | ✅ 可用 | 无特殊参数 | [adapter-public-api.md](references/adapter-public-api.md) |
+| `bilibili` | B站 | ✅ 可用 | **`summary` 是零成本精读入口**（官方 AI 总结，无需下载转写）；采集策略：search→summary→有价值才 ASR | [adapter-bilibili.md](references/adapter-bilibili.md) |
 | `hackernews` / `arxiv` / `wttr` 等 | 公开 API | ✅ 可用 | 无需浏览器 | [adapter-public-api.md](references/adapter-public-api.md) |
 | `doubao` / `chatgpt` / `claude` | AI 工具 | ⚠️ 部分可用 | ChatGPT 因 UI 改版选择器失效 | 见 pitfalls.md |
+| `antigravity` | AntiGravity（桌面应用） | ✅ CDP 已打通 | **必须以 `--remote-debugging-port=9234` 启动**；31 命令 12✅/6⚠️/14❌；⚠️ **send 可能假成功**（整页刷新后/agent忙碌时不落盘），必须用 transcript 验证；read/history/new/extract-code 选择器过期（真实 testid 已确认可修复）；5 条 Windows 路径 bug；⚠️ `model "Pro"` 会误中 "Projects" 菜单；**子智能体架构已破解**（独立 conversationId + 文件消息总线，用 ag_list_subagents.ps1）；读回复用 `ag_read_transcript.ps1`，代码用 `copy-code`；跳转 `ag_goto.ps1`，列会话 `ag_list.ps1`；**额度查询 `ag_quota.ps1`**（5小时+周配额，CDP导航Models页解析） | [adapter-antigravity.md](references/adapter-antigravity.md) |
 
 ## 本机专属环境（local/LOCAL.md，不提交）
 
@@ -160,7 +161,7 @@ with open('result.json', 'r', encoding='utf-8-sig') as f:
 |---|---|
 | [verified-platforms.md](references/verified-platforms.md) | 查某平台的登录态、命令清单、高价值子版/节点 |
 | [job-platforms.md](references/job-platforms.md) | **求职/招聘采集前必读**：8 个求职适配器状态矩阵、字段可信度、BOSS 禁区、按能力词反查公司 |
-| `adapter-*.md`（[xiaohongshu](references/adapter-xiaohongshu.md) / [zhihu](references/adapter-zhihu.md) / [boss](references/adapter-boss.md) / [maimai](references/adapter-maimai.md) / [public-api](references/adapter-public-api.md)） | 动手用某个具体适配器之前，先读它的卡 |
+| `adapter-*.md`（[xiaohongshu](references/adapter-xiaohongshu.md) / [zhihu](references/adapter-zhihu.md) / [boss](references/adapter-boss.md) / [maimai](references/adapter-maimai.md) / [antigravity](references/adapter-antigravity.md) / [bilibili](references/adapter-bilibili.md) / [reddit](references/adapter-reddit.md) / [v2ex](references/adapter-v2ex.md) / [github](references/adapter-github.md) / [public-api](references/adapter-public-api.md)） | 动手用某个具体适配器之前，先读它的卡 |
 
 ### 第二层 · 通道层「怎么把一个渠道跑通」
 
@@ -189,7 +190,7 @@ with open('result.json', 'r', encoding='utf-8-sig') as f:
 | [bilibili-asr-workflow.md](references/bilibili-asr-workflow.md) | B站视频 → 字幕（yt-dlp + faster-whisper） |
 | [adapters/README.md](adapters/README.md) | 本 skill 自建的适配器源码与安装方法（换机器时复制启用） |
 
-**脚本**：[init_research.py](scripts/init_research.py)（建调研目录）、[lexicon_scan.py](scripts/lexicon_scan.py)（词典扫描 tags/freq/tier/inventory）、[bili_asr.py](scripts/bili_asr.py)（B站转写）
+**脚本**：[init_research.py](scripts/init_research.py)（建调研目录）、[lexicon_scan.py](scripts/lexicon_scan.py)（词典扫描）、[bili_asr.py](scripts/bili_asr.py)（B站转写）、[ag_goto.ps1](scripts/ag_goto.ps1)（AntiGravity 跳转会话）、[ag_list.ps1](scripts/ag_list.ps1)（AntiGravity 列会话）、[ag_read_transcript.ps1](scripts/ag_read_transcript.ps1)（AntiGravity 读对话）、[ag_list_subagents.ps1](scripts/ag_list_subagents.ps1)（AntiGravity 列子智能体）、[ag_send_to_subagent.ps1](scripts/ag_send_to_subagent.ps1)（AntiGravity 向子智能体投递消息，谨慎）、[ag_quota.ps1](scripts/ag_quota.ps1)（AntiGravity 会员额度查询，5小时+周配额）
 
 ---
 

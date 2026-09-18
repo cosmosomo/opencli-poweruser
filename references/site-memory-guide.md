@@ -65,7 +65,7 @@ opencli-poweruser/
 
 | 信息 | 记录到哪里 | 示例 |
 |---|---|---|
-| 平台登录状态 | `verified-platforms.md` | ✅ 已登录（wjsnbb）/ ⏸️ 搁置（stale page identity） |
+| 平台登录状态 | `verified-platforms.md` | ✅ 已登录（账号名）/ ⏸️ 搁置（stale page identity） |
 | 可用命令清单 | `verified-platforms.md` 或 `adapter-<name>.md` | whoami/search/note/comments/feed |
 | 必加参数 | `adapter-<name>.md` | `--site-session persistent`、`note` 需完整签名 URL |
 | 反爬策略 | `adapter-<name>.md` 或 `anti-bot-notes.md` | 同一适配器 ≤ 3 次/分钟、foreground 重建会话 |

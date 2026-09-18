@@ -343,3 +343,55 @@ PowerShell 和 Linux shell 语法不同，注意别名和参数差异
 ---
 
 *本文件最后更新：2026-09-12（合并：§七议题词典[千问] + §八推理决策树[豆包]）*
+
+---
+
+## 九、AntiGravity 委托执行模式（2026-09-17 验证）
+
+> 多渠道并行采集的可选路径：通过 opencli antigravity send 委托 AntiGravity 执行采集，适合需要跨多个适配器、遵守不同限流节奏的探针批次。
+
+### 9.1 适用场景
+
+- 多渠道探针（3+ 平台，每个只需少量关键词）
+- 需要 AntiGravity 自主判断工具用法（先 --help 再执行）
+- 需要遵守不同平台的限流节奏（AntiGravity 能自主间隔）
+- 单线程顺序执行即可，不需要极致并行
+
+### 9.2 执行流程
+
+`powershell
+# 1. 确保 CDP 连接（9234 端口）
+opencli antigravity status -f json
+
+# 2. 回首页 + 发送委托任务（自动新建会话）
+opencli antigravity nav back -f json
+opencli antigravity send "请执行以下多渠道社区调研探针：1) Reddit r/resumes/r/PhD 各搜 5 帖；2) V2EX jobs/programmer 节点各读 10 帖；3) B站搜'校招简历'用 summary 精读 top3；每个平台遵守对应限流节奏。结果整理成表格。" -f json
+
+# 3. ⚠️ 验证 send 真成功（send 有假成功 bug）
+Start-Sleep 3
+ = opencli antigravity status -f json | ConvertFrom-Json
+ = (.url -split '/c/')[1] -split '\?')[0]
+& scripts/ag_read_transcript.ps1 -ConversationId  -LastN 3
+
+# 4. 等待执行（多渠道探针约 10-15 分钟）
+# 可用 ag_list_subagents.ps1 监控是否派生子智能体
+
+# 5. 读取最终结果
+& scripts/ag_read_transcript.ps1 -ConversationId  -LastN 20
+`
+
+### 9.3 实测数据（2026-09-17）
+
+- **耗时**：12 分钟完成 5 渠道探针 + 5 小红书关键词补搜
+- **AntiGravity 行为**：未派生子智能体，单线程自主执行；能自行查阅 --help；遵守 35s 限流间隔
+- **产出质量**：6 渠道各有结构化结果，含关键发现和信号
+- **局限**：最终报告中间部分被自身输出截断（长输出风险）；GitHub 中文搜索因编码失败
+
+### 9.4 注意事项
+
+- **send 假成功 bug**：CDP 刷新后前 1-2 次 send 可能报成功但不落盘，必须用 transcript 验证
+- **长输出截断**：AntiGravity 的最终回复可能被自身输出截断，重要数据应在执行过程中落盘到文件，不要只依赖最终回复
+- **模型切换**：用完整模型名（如 "Gemini 3.8 Flash High"），不要用短名 "Pro"（会误中 "Projects" 菜单）
+- **技术事实回流**：AntiGravity 执行中发现的技术坑（命令/参数/节奏）必须回流到对应 dapter-*.md，不要只留在调研报告里
+
+*本文件最后更新：2026-09-17（追加 §九 AntiGravity 委托执行模式）*

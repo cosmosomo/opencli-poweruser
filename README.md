@@ -36,7 +36,7 @@ Follow the official guide to install the OpenCLI Browser Bridge extension in Chr
 ### 3. Start Daemon
 
 ```bash
-opencli daemon start
+opencli daemon restart  # no `daemon start` subcommand exists
 opencli daemon status  # verify: Daemon running + Extension connected
 ```
 

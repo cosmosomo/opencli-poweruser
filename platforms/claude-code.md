@@ -51,7 +51,7 @@ This project uses the opencli-poweruser skill for web data collection.
 ## Prerequisites
 - OpenCLI installed: `npm install -g @jackwener/opencli`
 - Chrome with OpenCLI Browser Bridge extension
-- Daemon running: `opencli daemon start`
+- Daemon running: `opencli daemon restart` (there is no `daemon start` subcommand)
 
 ## Machine-specific config
 Read `~/skills/opencli-poweruser/local/LOCAL.md` for your profile ID and paths.
@@ -102,7 +102,7 @@ cp local/LOCAL.md.example local/LOCAL.md
 
 ```bash
 npm install -g @jackwener/opencli
-opencli daemon start
+opencli daemon restart   # 没有 daemon start 子命令
 opencli daemon status
 ```
 

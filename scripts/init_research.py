@@ -23,7 +23,7 @@ from pathlib import Path
 # 默认知识空间根目录（可通过 --base 覆盖，或环境变量 RESEARCH_BASE）
 DEFAULT_BASE = os.environ.get(
     "RESEARCH_BASE",
-    os.path.join(os.path.expanduser("~"), "research-logs"),
+    os.path.expanduser(r"~\knowledge-space\research-logs")
 )
 
 README_TEMPLATE = """# {title}

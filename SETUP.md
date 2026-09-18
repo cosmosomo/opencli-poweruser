@@ -78,7 +78,7 @@ opencli doctor
 - `Daemon: running`（daemon 已启动，端口通常为 19825）
 - `Extension: connected`（浏览器扩展已连接）
 
-> daemon 会在需要时自动启动，无需手动运行。如果 `daemon status` 显示 not running，运行 `opencli daemon start` 或执行任意需要浏览器的命令触发自动启动。
+> daemon 会在需要时自动启动，无需手动运行。如果 `daemon status` 显示 not running，运行 `opencli daemon restart`（**没有 `daemon start` 子命令**，只有 restart / status / stop）或执行任意需要浏览器的命令触发自动启动。
 
 ---
 
@@ -224,8 +224,8 @@ opencli profile use <profile-name>
 | 问题 | 原因 | 解决 |
 |---|---|---|
 | `opencli: command not found` | npm 全局 bin 不在 PATH | `npm config get prefix` 查看路径，加入系统 PATH |
-| `Daemon: not running` | daemon 未启动 | `opencli daemon start` 或执行任意浏览器命令触发自动启动 |
-| `Extension: disconnected` | 扩展未安装或未启用 | 按第 3 节安装扩展，确认 Chrome 中扩展已启用 |
+| `Daemon: not running` | daemon 未启动 | `opencli daemon restart`（无 `daemon start` 子命令）或执行任意浏览器命令触发自动启动 |
+| `Extension: disconnected` / 扩展弹窗卡 `Reconnecting...` | **绝大多数是 daemon 没在跑**，扩展侧通常没问题；其次才是扩展未安装/未启用 | 先 `opencli daemon restart`，daemon 一回来扩展约 4 秒自动重连；仍不连再按第 3 节查扩展 |
 | `Multiple Browser Bridge profiles are connected` | 多个 Chrome profile 连接 | 用 `--profile <name>` 指定或 `opencli profile use` 设默认 |
 | `AUTH_REQUIRED` | 网站未登录 | 在 Chrome 中手动登录对应网站 |
 | `stale page identity` | 浏览器标签页会话过期 | 用 `--window foreground --site-session persistent` 重建一次会话，后续切 background |

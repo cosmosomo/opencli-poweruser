@@ -111,13 +111,19 @@ cmd /c start "OpenCLI Daemon" /B "node.exe" "daemon.js"
 - 长期需求走人机协作（浏览器插件只读 DOM / 截图+AI），不要依赖 CDP 纯自动化；
 - 识别方法与应对策略详见 `anti-bot-notes.md`。
 
-### 8. v1.8.6 没有 `opencli daemon start`（2026-09-12 实测）
+### 8. 没有 `opencli daemon start`（2026-09-12 实测；2026-09-18 在 v1.8.7 复测依旧如此）
 
 **现象**：`opencli daemon start` 报 `error: unknown command 'start'`。
 
 **原因**：daemon 子命令只有 `restart / status / stop`，没有 start（daemon 由 restart 或首次浏览器命令自动拉起）。
 
 **解决**：用 `opencli daemon restart`，随后 `opencli daemon status` 确认 `running on port 19825`。
+
+**连带结论（2026-09-18 实测）**：扩展弹窗卡 `Reconnecting...` 的唯一根因就是 daemon 没在跑，扩展侧不用排查。
+daemon 设计上是持久进程（`daemon.js` 头注释：stays alive until explicit shutdown、SIGTERM 或 uninstall），**没有空闲自杀逻辑**，
+所以它不在 = 异常而非常态。硬杀 daemon 进程再拉起，两个 profile 均在 **4 秒内**自动回连。
+健康探针用 `GET http://127.0.0.1:19825/status`（需 `X-OpenCLI: 1` 请求头，返回每个 profile 的 `extensionConnected`），
+比只看端口通不通更准；`/ping` 不需要请求头。注意本机若设了 `HTTP(S)_PROXY`，探针要显式绕过代理。
 
 ### 9. 适配器命令没有 `--timeout` 参数（2026-09-12 实测）
 
@@ -319,7 +325,7 @@ BOSS 数据改走**人工单次通道**，**OpenCLI 侧不做任何自动化**�
 > 合并说明：这两条不矛盾——"适配器能跑"与"该不该用它跑"是两个问题。账号风险优先。
 
 > **版本提示（2026-09-17 收尾更新）**：本机已从 1.8.6 升级到 **v1.8.7**，上述标注 v1.8.7 的修复结论现已成立。
-> 但 §8（`daemon start` 不存在）等标注 v1.8.6 的条目属历史记录，保留以便回溯。
+> ⚠️ 例外：§8（`daemon start` 不存在）**不是历史记录**——2026-09-18 在 v1.8.7 复测依旧如此，结论仍然有效。
 > **升级后必做**：自建适配器在 `~/.opencli/clis/` 不受升级影响，但**对官方适配器的本地修改会被覆盖**（如脉脉 `page.wait` / `n_csrf_token` 两处补丁），需重打。
 
 ## 进化日志
@@ -334,7 +340,7 @@ BOSS 数据改走**人工单次通道**，**OpenCLI 侧不做任何自动化**�
 
 ### 2026-08-20 系统全局安装
 
-- ✅ OpenCLI 全局安装到 npm 全局目录（Windows 为 `%APPDATA%\npm`），任意终端可调用
+- ✅ OpenCLI 全局安装到 `%APPDATA%\npm`，任意终端可调用
 - ✅ 验证系统全局 opencli 可连接已有 daemon（端口 19825）
 
 ### 2026-08-21 浏览器后台运行方案调研
@@ -359,12 +365,12 @@ BOSS 数据改走**人工单次通道**，**OpenCLI 侧不做任何自动化**�
 ### 2026-08-27 8 平台登录验证 + verified-platforms.md
 
 - ✅ 验证 8 个平台登录状态（v6pz9gjx profile）：
-  - 小红书 ✅（COSMOS，17粉）
-  - 知乎 ✅（wjsnbb）
+  - 小红书 ✅（已登录）
+  - 知乎 ✅（已登录）
   - 掘金 ✅（无需登录，hot/recommend 公开）
   - GitHub ✅（已登录）
-  - Reddit ✅（Intrepid_Ad3831，2021年注册）
-  - V2EX ✅（cosmostxy）
+  - Reddit ✅（已登录，2021 年注册的老账号）
+  - V2EX ✅（已登录）
   - linux.do ✅（已登录，feed 正常）
   - BOSS直聘 ⏸️（暂时搁置，stale page identity + detached）
 - ⚠️ 发现 linux.do whoami 误报 bug：读 meta 标签 current-user-username 不存在，但实际已登录，feed/search/topic 正常
@@ -400,10 +406,77 @@ BOSS 数据改走**人工单次通道**，**OpenCLI 侧不做任何自动化**�
 
 - ✅ 新环境部署：千问工作助理（Windows）SkillImport 安装本 skill 成功；opencli v1.8.6 全局可用，daemon restart 拉起，profile v6pz9gjx 桥接正常
 - ✅ 单平台批量采集实测：11 组关键词（6 组命中）→ 58 篇去重 → **51 篇 note 全文精读零风控**（7s 间隔）——再次验证 note 通道远比 search 宽松，"先攒 search 列表、后批量精读"策略成立
-- ✅ 调研成果：Agent Harness 领域（DSH/Pi/Hermes/Cordis 路线之争）关键词图谱+路线分析报告，存本地调研目录（`research/<日期>-<议题>/`）
+- ✅ 调研成果：Agent Harness 领域（DSH/Pi/Hermes/Cordis 路线之争）关键词图谱+路线分析报告（报告本体不公开）
 - ⚠️ 本次踩坑 6 条已固化为本文件通用问题 §8-§13：daemon 无 start / 无 --timeout / whoami 走 creator 站点（探活用 feed）/ Python 调 .cmd shim 截断签名 URL（node 直调 main.js）/ Tee-Object UTF-16 编码坑 / note 输出 field-value 摊平结构
 - ⚠️ search 累积限流复现：第 6 词后 OpenClaw/harness论文/harness对比/上下文工程 四连空数组（feed 探活正常），与 §6 长会话累积限流模式一致；本次靠"转 note 精读"完成调研，未硬等冷却
 - 📝 待办：`OpenClaw`、`上下文工程` 两个关键词在冷却充分后补跑
+
+### 2026-09-17 antigravity 适配器验证（外部智能体连接测试）
+
+- ✅ `status`：CDP 连接正常。**前置条件**：AntiGravity 必须以 `--remote-debugging-port=9234 --remote-allow-origins=*` 启动（win32 不支持 auto-launch），否则报 `Antigravity is not reachable on CDP port 9234`
+- ✅ 连接流程实测：优雅关闭运行中实例（CloseMainWindow 等待退出）→ 带调试参数重启 → 轮询 9234 端口开放 → `status` 由"Connected + loading splash"过渡到"Connected + 应用主界面 URL"（约 15s）
+- ✅ `send`：消息送达成功，AntiGravity 自动新建会话并自动命名（本次自动命名 "Agent Connection Test"）；智能体 "Thought for 24s" 后回复确认
+- ✅ `copy-message`：可抓取最后一条助手消息全文（含用户消息+思考时间+回复），可作为 `read` 的替代
+- ⚠️ `read` / `history` / `workspaces-list`：报 `Could not find conversation container`（DOM 选择器与当前 UI 版本不匹配），读回复改用 `copy-message`
+- ⚠️ `dump`：~~返回 /tmp 路径但文件未落盘~~ **修正**：文件实际落盘在当前工作盘根目录 `\tmp\` 下（如 `E:\tmp\antigravity-dom.html`，177KB），Node.js 将 `/tmp/` 解析为当前盘根目录而非 `%TEMP%`
+- 📌 会话持久化：重启后应用自动恢复历史会话（VS Code 内核 state 持久化），无需额外操作
+- 反爬风险：N/A（本地桌面应用 CDP，非网站）
+
+#### 会话管理深度测试（第二轮）
+
+- ✅ `nav back` / `nav forward`：应用内历史导航正常，back 回首页 `/`，forward 回会话
+- ✅ `sidebar-toggle`：侧边栏切换正常
+- ✅ `model`（无参数）：读取当前模型正常，当前为 `Gemini 3.8 Flash High`
+- ✅ **从首页 `send` 自动新建会话**：在首页（URL `/`）执行 `send <msg>` 会自动创建新会话并跳转，会话 ID 可从 `status` 的 URL 中提取。这是 `new` 命令失效后的可靠替代方案
+- ✅ **CDP 直接跳转指定会话**：适配器无 goto 命令，但可通过 CDP `Page.navigate` 跳转到任意历史会话。URL 模式：`https://127.0.0.1:<app_port>/c/<conversation_id>?section=f2e7e3a6-0af3-4ee1-a2b6-01068ac9f4ac`（app_port 每次启动变化，section_id 恒定）
+- ⚠️ `new`：报 `Could not find New Conversation button`（DOM 选择器失效），用"首页 send"替代
+- ⚠️ **Windows 路径 bug（系统性）**：`state-keys` / `state-get` / `settings-read` / `workspaces-list` 全部硬编码 macOS 路径 `~/Library/Application Support/Antigravity/`，在 Windows 上报 file not found。真实路径为 `%APPDATA%\Antigravity\`（即 `C:\Users\<user>\AppData\Roaming\Antigravity\`）
+- 📌 **会话发现（绕过适配器 bug）**：
+  - 活跃会话列表：解析 `%APPDATA%\Antigravity\app_storage.json`，键名匹配 `antigravity-multi-conversation-layout-v3-<conversation_id>`（实测 23 个活跃会话）
+  - 全部会话（含已归档）：列出 `~/.gemini/antigravity/brain/<conversation_id>/` 目录（实测约 40 个）
+  - 会话用途/标题：读取 `~/.gemini/antigravity/brain/<id>/task.md` 首行
+  - state.vscdb：`%APPDATA%\Antigravity\User\globalStorage\state.vscdb`（SQLite，721 键，含 `chat.ChatSessionStore.index` 但实测为空对象）
+- ⚠️ `idb-list` / `storage-keys`：返回空（CDP 附着的页面上下文与实际存储上下文不一致；真实 IndexedDB 在 `%APPDATA%\Antigravity\IndexedDB\https_127.0.0.1_<port>.indexeddb.leveldb\`）
+- 📝 辅助脚本：`scripts/ag_goto.ps1` — 按会话 ID 跳转（CDP Page.navigate 封装）
+
+#### 全量可用性测试（第三轮，从零开始新使用者视角）
+
+- 📊 **31 条命令实测结果**：12 ✅ 完全可用 / 6 ⚠️ 部分可用 / 13 ❌ 失效，平均评分 2.8/5
+- ✅ **新验证可用的命令**（此前标为"未测"）：`settings`、`model <name>`（切换模型）、`watch`（流式监听）、`react good/bad`、`add-context`、`toggle-aux`、`display-options`（列出 11 个选项）
+- ⚠️ **copy-message 缓存问题（新发现）**：`send` 报告成功后，等待 10-60s 后 `copy-message` 始终返回发送前的旧内容。截图确认界面已显示新回复，但 DOM 选择器命中了旧消息的 Copy 按钮。绕行：`nav back` → `nav forward` 刷新 DOM，或用 `ag_read_transcript.ps1` 直读磁盘
+- ✅ **transcript.jsonl 发现（重要）**：`~/.gemini/antigravity/brain/<id>/.system_generated/logs/transcript.jsonl` 包含完整对话转写（JSONL，含用户消息/助手回复/工具调用），32/45 会话有此文件。这是 `read` 命令失效后的**最可靠替代方案**，不受 DOM 选择器影响
+- 📌 **brain 目录结构修正**：旧文档说"每目录有 task.md + artifacts/"，实际 45 个目录中仅 10 个有 task.md，0 个有 artifacts/。标题需从 transcript.jsonl 首条用户消息推断
+- ⚠️ **history 失败根因修正**：不只是"侧边栏没打开"——截图确认侧边栏可见时 `history` 仍然失败，是会话条目的 DOM 选择器完全过期
+- 📌 **Windows 路径 bug 影响 5 条命令**（此前记为 4 条）：新增 `recent-paths` 同样硬编码 macOS 路径
+- 📝 **活跃会话数更新**：app_storage.json 实测 24-25 个（此前记 23 个）
+- 📝 新增辅助脚本：`scripts/ag_read_transcript.ps1` — 从 transcript.jsonl 读取完整对话（推荐用于读回复）；`ag_list.ps1` 已增强，无 task.md 时从 transcript.jsonl 推断标题
+- 完整测试报告：本地知识库 `opencli/antigravity-usability-test/`（报告本体不公开）
+
+#### 全功能深度测试（第四轮，狠狠的用）
+
+- 🔴 **P0：send 假成功**：整页 CDP 刷新后前 1-2 次 send 报 `Sent successfully` 但不落 transcript；agent 忙碌时（有运行中子智能体）输入被静默丢弃；快速连续 send 可能被 Lexical 编辑器缓冲合并成一条。**必须 send 后读 transcript 验证**
+- 🚨 **子智能体架构破解（最大发现）**：AntiGravity 有完整多智能体系统。派发工具 `invoke_subagent`/`manage_subagents`；子智能体是**独立 conversationId + 独立 brain 目录 + `messages/` 文件消息总线**；元数据在 `brain/<父>/.system_generated/subagents/<子id>.json`（含 role/state/spawnStepIndex）。实测用户 Hermes 会话正跑 2 个子智能体（Xiaohongshu Collector 179步、Technical & Ecosystem Researcher），子智能体自己在调 opencli 采小红书。适配器完全未暴露此能力
+- 🔧 **DOM 选择器真凶确认**：`read`/`history`/`new` 失效不是应用没功能，而是选择器过期。真实 testid 全部存在：`[data-testid="conversation-view"]`、`[data-testid="conversation-list-sidebar"]`、`[data-testid="new-conversation-button"]`、`[data-testid^="convo-pill-"]`。改选择器即可复活
+- ⚠️ **model "Pro" 危险 bug**：子串匹配范围未限定在模型下拉项，`model "Pro"` 误中侧边栏 "Projects" 菜单并导航过去。用完整模型名
+- ❌ **extract-code 实际失效**：有代码块仍返回 `[]`（copy-code 是好的，两者选择器未对齐）
+- 📦 **state.vscdb 会话索引是 protobuf 不是 JSON**：`jetskiStateSync.agentManagerInitState`（48 会话，含 TaskName/TaskSummary）和 `antigravityUnifiedStateSync.trajectorySummaries`（18 会话）是 base64 编码的 protobuf。`chat.ChatSessionStore.index` 是空的
+- 📝 **transcript 有两个版本**：`transcript.jsonl`（精简）+ `transcript_full.jsonl`（完整未截断）+ `chunks/`（大字段分片）。含 `thinking` 思考链和 `CHECKPOINT` 上下文压缩点
+- 🗑️ **IndexedDB 完全为空**（0 字节），不是 CDP 上下文问题
+- 🔒 **安全发现**：`app_storage.json` 的 `aux-pane-session` 含明文命令历史（包括 GROK API key）；`settings.json` 含第三方 API 代理地址和缓存账号。处理这些文件时注意脱敏
+- 📊 **性能**：status/send 单次 350-450ms；watch 重定向到文件只捕获 banner（TTY 缓冲问题），需 `cmd /c opencli.cmd antigravity watch` 包装
+- 📝 新增脚本：`ag_list_subagents.ps1`（列子智能体）、`ag_send_to_subagent.ps1`（向子智能体投递消息，谨慎）
+- 完整深度测试报告：本地知识库 `opencli/antigravity-usability-test/deep-test/`（14 份文档）+ `storage-forensics/`（9 份文档）——报告本体不公开
+
+#### 会员额度查询（第五轮，2026-09-17）
+
+- ❌ **opencli antigravity 无额度命令**：31 条命令中无 quota/usage/account/balance 相关命令
+- 🔍 **本地存储无额度数据**：`state.vscdb` 中 `antigravityUnifiedStateSync.modelCredits` / `userStatus` / `oauthToken` 均为 0 字节（空）；`antigravityUserSettings.allUserSettings`（base64 protobuf，382 bytes）仅含 dev-container 和 ssh-remote 配置；`settings.json` 的 `augmentBalance.cachedAccount` 是另一个扩展（augment）的缓存且已过期（2025-10-22）。**额度数据从云端 API 实时获取，不缓存到本地**
+- ✅ **CDP 导航到 Models & Usage 页可查额度**：URL 参数 `settingsScreen=Models`，页面包含两套独立额度（Gemini Models + Claude/GPT models），每套有 5-hour limit + weekly limit，显示剩余百分比 + 刷新倒计时 + SVG 进度圆环（`data-testid="quota-progress-circle"`）
+- 📊 **实测数据**：Google AI Pro 计划，Gemini 5小时剩余 78%（1小时后刷新），周额度剩余 85%（6天3小时后刷新）；Claude/GPT 100%（未使用）；Token Usage：Rules 1,153 tokens (5.8%)，Skills 9,566 tokens (47.8%)，自定义预算 46.4% available
+- 🔧 **设置页面共 14 个**：`data-testid="settings-nav-item-<名称>"`，包括 Account/App/Appearance/Browser/Conversations/Customizations/General/Jobs/L1_manuscript/Models/Provide Feedback/Shortcuts/media
+- 💡 **AI Credit Overages 开关**：额度用完后可自动用 AI credits 继续（`Enable AI Credit Overages`）；有手动刷新按钮 `Refresh quota and credits data`
+- 📝 **新增脚本**：`scripts/ag_quota.ps1` — 一键查询会员额度（CDP 导航 Models 页 → dump DOM → 解析额度圆环 → 格式化输出，支持 `-Raw` JSON 输出）
+- ⚠️ **AntiGravity 自身无法读取额度**：在会话中询问"我的会员额度"，它明确回答"没有直接读取底层账户订阅系统的权限"，建议通过 Settings UI 查看
 
 ## 新适配器验证模板
 

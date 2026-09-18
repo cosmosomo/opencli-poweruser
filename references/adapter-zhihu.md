@@ -1,4 +1,4 @@
-# 知乎适配器经验
+﻿# 知乎适配器经验
 
 > 验证日期：2026-09-03
 > 版本：opencli v1.8.6
@@ -50,6 +50,17 @@ COOKIE 策略——通过浏览器扩展在页面内执行 JS 抓取数据。
 `rank, title, type(answer/article/question), author, author_url, votes(赞同数), url, excerpt(摘要), published_at`
 
 **type 字段很重要**：answer 类型才能用 answer-detail 拿全文；article 类型用 download 导出；question 类型用 question 拿问题页。
+
+### search 支持按类型筛选（2026-09-17 实测确认）
+
+opencli zhihu search <query> --type answer|article|question 可按结果类型筛选。
+
+- 默认 --type all（或不传）：返回 answer/article/question 混合结果
+- --type answer：只返回回答（最常用，可直接用 answer-detail 拿全文）
+- --type article：只返回文章（可用 download 导出 Markdown）
+- --type question：只返回问题（可用 question 拿问题页）
+
+**使用建议**：调研时优先用 --type answer 过滤，因为回答类型才能直接 answer-detail 精读，且通常赞同数更高、信息密度更大。
 
 ### 高赞筛选
 
