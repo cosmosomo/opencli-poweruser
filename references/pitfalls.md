@@ -224,6 +224,28 @@ while (Date.now() < deadline) {
 可以在完全离线的情况下同步多个副本，不必等 origin 可达。
 先用 `git merge-base --is-ancestor A B` 确认是纯快进再做。
 
+### 17. `--window` / `--site-session` / `--limit` 是**子命令级**参数，放全局位置必报错（2026-09-17 实测）
+
+**现象**：`opencli --profile v6pz9gjx --window background nowcoder search "x"` →
+`error: unknown option '--window'`
+
+**原因**：opencli 只有 **`--profile` 一个全局参数**（`opencli --help` 的 Options 段只列了 `--profile` 和 `-V/-h`）。
+`--window` / `--site-session` / `--keep-tab` 属于每个子命令的 "Browser common options"，
+`-f/--format` / `--trace` / `-v` 属于 "Common options"，**全部必须跟在子命令后面**。
+
+```bash
+# ❌ 错
+opencli --profile v6pz9gjx --window background nowcoder search "x" -f json
+# ✅ 对
+opencli --profile v6pz9gjx nowcoder search "x" --window background -f json
+#        └─ 全局 ─┘        └ 适配器 ┘ └命令┘ └──── 子命令级 ────┘
+```
+
+**记忆口诀**：`opencli [全局:--profile] <adapter> <command> [args] [其它所有选项]`。
+
+**规避**：窗口模式改用环境变量 `$env:OPENCLI_WINDOW="background"` 一次设定全局生效，
+就不必每条命令都带 `--window`（SKILL.md「默认后台窗口模式」已有此法，本条解释了为什么它更省事）。
+
 ## 适配器特定问题
 
 ### ChatGPT 适配器（UI 改版导致选择器失效）

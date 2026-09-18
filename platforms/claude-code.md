@@ -12,13 +12,29 @@
 
 ### 1. 选择集成方式
 
-Claude Code 没有原生的"Skill"概念，但有三种等效方式集成 opencli-poweruser：
+> ⚠️ **2026-09-17 更正**：下面"Claude Code 没有原生 Skill 概念"的旧判断**已过时**。
+> Claude Code 现已有原生 Skill 系统，本 skill 当前就是从 `~/.claude/skills/opencli-poweruser/` 原生加载的。
+> **新装机一律用方式 0**，A/B/C 保留仅供老配置参考。
 
 | 方式 | 适用场景 | 复杂度 |
 |---|---|---|
-| **A. CLAUDE.md** | 项目级使用，所有对话自动加载 | ⭐ 低 |
-| **B. .claude/agents/** | 可召唤的专用 Agent | ⭐⭐ 中 |
-| **C. MCP Server** | 工具级集成，可被其他 Agent 调用 | ⭐⭐⭐ 高 |
+| **0. 原生 Skill（推荐）** | 用户级安装，按 description 自动触发，可 `Skill` 工具显式调用 | ⭐ 低 |
+| A. CLAUDE.md | 项目级使用，所有对话自动加载 | ⭐ 低 |
+| B. .claude/agents/ | 可召唤的专用 Agent | ⭐⭐ 中 |
+| C. MCP Server | 工具级集成，可被其他 Agent 调用 | ⭐⭐⭐ 高 |
+
+### 方式 0：原生 Skill（当前本机采用）
+
+```bash
+git clone <repo> ~/.claude/skills/opencli-poweruser
+```
+
+要求：仓库根有 `SKILL.md`，且带 YAML frontmatter（`name` + `description`）——本仓已满足。
+装好后 Claude Code 会把 `name`/`description` 注入会话的可用 skill 列表，**按 description 里的触发词自动命中**，
+也可以用 `Skill` 工具指名调用。`references/` / `scripts/` 按需读取，不进常驻上下文。
+
+→ 所以 **`description` 的触发词写得准不准，直接决定这个 skill 会不会被想起来**，
+它是整个 skill 唯一**无条件常驻**的文本，比 SKILL.md 正文还关键。
 
 ### 2. Clone 仓库
 
@@ -54,7 +70,7 @@ This project uses the opencli-poweruser skill for web data collection.
 - Daemon running: `opencli daemon restart` (there is no `daemon start` subcommand)
 
 ## Machine-specific config
-Read `~/skills/opencli-poweruser/local/LOCAL.md` for your profile ID and paths.
+Read `~/.claude/skills/opencli-poweruser/LOCAL.md` for your profile ID and paths.
 ```
 
 ### 4. 方式 B：自定义 Agent
@@ -94,8 +110,8 @@ Key tools:
 
 ```bash
 cd ~/skills/opencli-poweruser
-cp local/LOCAL.md.example local/LOCAL.md
-# 编辑 local/LOCAL.md
+cp local/LOCAL.md.example LOCAL.md   # 注意：落到仓库根，不是 local/
+# 编辑 LOCAL.md
 ```
 
 ### 7. 安装 OpenCLI
@@ -116,7 +132,8 @@ opencli daemon status
 
 ## Claude Code 平台注意事项
 
-1. **没有原生 Skill 系统**：需要用 CLAUDE.md 或自定义 Agent 模拟
+1. ~~没有原生 Skill 系统~~ → **已有原生 Skill 系统**（`~/.claude/skills/`，2026-09-17 更正）。
+   仍需注意：`references/` 是**按需读取**的，agent 只常驻 SKILL.md —— 没登记进导航表的文件不会被读到
 2. **路径配置**：Claude Code 的工作目录是当前项目，注意使用绝对路径引用 Skill 文件
 3. **工具差异**：Claude Code 没有豆包的 browser_use/computer_use 工具，完全依赖 OpenCLI 自身的 browser 工具
 4. **权限管理**：确认 Claude Code 有权限执行 opencli、python 等命令（可能需要 `--dangerously-skip-permissions` 或配置允许列表）
@@ -125,13 +142,13 @@ opencli daemon status
 
 | 维度 | 豆包 | Claude Code |
 |---|---|---|
-| Skill 系统 | ✅ 原生 `.user_skills/` | ❌ 用 CLAUDE.md / Agent 模拟 |
+| Skill 系统 | ✅ 原生 `.user_skills/` | ✅ 原生 `~/.claude/skills/`（2026-09-17 更正，原记"无"已过时） |
 | 浏览器控制 | ✅ 内置 browser_use | ❌ 依赖 OpenCLI browser |
 | 桌面控制 | ✅ 内置 computer_use | ❌ 无 |
 | 代码编辑 | ⚠️ 一般 | ✅ 强 |
 | MCP 支持 | ⚠️ 有限 | ✅ 完整支持 |
 | 跨平台 | ⚠️ 主要 Windows | ✅ macOS/Linux/Windows |
-| 召唤方式 | 自动加载 | `@agent-name` 或 CLAUDE.md |
+| 召唤方式 | 自动加载 | description 触发词自动命中 / `Skill` 工具指名调用 |
 
 ## 更新 Skill
 

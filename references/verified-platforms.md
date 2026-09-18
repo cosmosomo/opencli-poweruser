@@ -1,259 +1,114 @@
-# 已验证平台清单
+# 已验证平台清单（登录态总表 + 卡索引）
 
-> 验证日期：2026-08-27
-> 浏览器 profile：v6pz9gjx
-> 窗口模式：默认 background（OPENCLI_WINDOW=background）
-
-## 平台总览
-
-| # | 平台 | 适配器 | 登录状态 | 优先级 | 备注 |
-|---|---|---|---|---|---|
-| 1 | 小红书 | `xiaohongshu` | ✅ 已登录 | 🥇 高 | 已登录 |
-| 2 | BOSS 直聘 | `boss` | ⏸️ 暂时搁置 | — | stale page identity + detached，后续排查 |
-| 3 | 知乎 | `zhihu` | ✅ 已登录 | 🥈 中 | 已登录 |
-| 4 | 掘金 | `juejin` | ✅ 可用（无需登录） | 🥉 低 | hot/recommend 公开内容 |
-| 5 | GitHub | `github` | ✅ 已登录 | 🥇 高 | 已登录 |
-| 6 | Reddit | `reddit` | ✅ 已登录 | 🥇 高 | 已登录（2021 年注册的老账号） |
-| 7 | V2EX | `v2ex` | ✅ 已登录 | 🥈 中 | 已登录 |
-| 8 | linux.do | `linux-do` | ✅ 已登录 | 🥈 中 | whoami 误报，feed 正常 |
+> 首次验证：2026-08-27（profile `v6pz9gjx`，窗口模式默认 background）
+> 结构调整：2026-09-17 —— **命令清单已迁往各渠道自己的 `adapter-*.md`**，本文件只保留
+> ①登录态与账号总表 ②去哪张卡查 ③尚无独立卡的渠道明细。
+>
+> 为什么拆：一个渠道的技术维护信息（命令 / 输出结构 / 踩坑 / 节奏 / 渠道职能）应当**只有一个家**，
+> 否则改一处、漏一处，读者还不知道该信哪份（[EVOLUTION.md](../EVOLUTION.md) §6.5 不重复）。
 
 ---
 
-## 各平台详细命令
+## 一、登录态与卡索引
 
-### 1. 小红书（xiaohongshu）
+| 平台 | 适配器 | 登录状态 | 优先级 | 维护卡（权威） |
+|---|---|---|---|---|
+| 小红书 | `xiaohongshu` | ✅ 已登录 | 🥇 高 | [adapter-xiaohongshu.md](adapter-xiaohongshu.md) |
+| 知乎 | `zhihu` | ✅ 已登录 | 🥈 中 | [adapter-zhihu.md](adapter-zhihu.md) |
+| Reddit | `reddit` | ✅ 已登录 | 🥇 高 | [adapter-reddit.md](adapter-reddit.md) |
+| V2EX | `v2ex` | ✅ 已登录 | 🥈 中 | [adapter-v2ex.md](adapter-v2ex.md) |
+| B站 | `bilibili` | ✅ 已登录 | 🥈 中 | [adapter-bilibili.md](adapter-bilibili.md) |
+| GitHub | `github` | ✅ 已登录 | 🥇 高 | [adapter-github.md](adapter-github.md) |
+| 脉脉 | `maimai` | ✅ 已登录（自建通道） | 🥈 中 | [adapter-maimai.md](adapter-maimai.md) |
+| 活动行 | `huodongxing` | ✅ 免登录 | 🥈 中 | [adapter-huodongxing.md](adapter-huodongxing.md) |
+| BOSS 直聘 | `boss` | 🔴 本机禁区 | — | [adapter-boss.md](adapter-boss.md) + [job-platforms.md](job-platforms.md) §六 |
+| 牛客 | `nowcoder` | ✅ 已登录 | 🥇 高 | [job-platforms.md](job-platforms.md) §四（**未单列卡**） |
+| 51job / LinkedIn / Indeed / 一亩三分地 | 各自 | 见卡 | — | [job-platforms.md](job-platforms.md) §三 §五 |
+| HackerNews / arXiv / wttr / github-trending | 各自 | ✅ 免登录 | — | [adapter-public-api.md](adapter-public-api.md) |
+| 掘金 | `juejin` | ✅ 免登录 | 🥉 低 | ⚠️ 无卡，明细见本文 §三 |
+| linux.do | `linux-do` | ✅ 已登录 | 🥈 中 | ⚠️ 无卡，明细见本文 §三 |
 
-**登录**：✅ 已登录
-
-**只读命令**：
-| 命令 | 用途 |
-|---|---|
-| `whoami` | 当前登录用户 |
-| `feed [--limit N]` | 首页推荐流 |
-| `search <query> [--limit N]` | 搜索笔记 |
-| `note <full-url>` | 笔记详情（需完整签名 URL，含 xsec_token） |
-| `comments <note-id>` | 笔记评论（含楼中楼） |
-| `user <id>` | 用户公开笔记 |
-| `liked` / `saved` | 赞过/收藏的笔记 |
-| `creator-stats` | 创作者数据总览 |
-
-**注意事项**：
-- `note` 必须传完整签名 URL，不能只用 note ID
-- 默认模式即可正常工作，不需要 foreground
-
----
-
-### 2. BOSS 直聘（boss）
-
-**登录**：⏸️ 暂时搁置
-
-**问题**：
-- `stale page identity`：页面句柄过期
-- `Detached while handling command`：daemon 连接断开
-
-**已知可用命令**（之前在 svxyqy6c profile 验证过）：
-| 命令 | 用途 |
-|---|---|
-| `search [query] --city <城市> --limit N` | 搜索职位 |
-| `detail <security-id>` | 职位详情 |
-| `chatlist` | 聊天列表 |
-| `whoami` | 登录状态（易报 stale） |
-
-**关键参数**（之前验证有效）：
-```bash
---window foreground --site-session persistent
-```
-
-**待办**：在 v6pz9gjx profile 中重新排查，可能需要先打开 zhipin.com 页面建立会话。
+> **状态位的权威在 [SKILL.md](../SKILL.md) 速查表**（🟢🟡⛔🔴⚠️⚪ 六档定级见
+> [channel-probing.md](channel-probing.md) §五）。本表只管"登录了没"和"去哪查"。
 
 ---
 
-### 3. 知乎（zhihu）
+## 二、登录态本身怎么验（别用 whoami）
 
-**登录**：✅ 已登录
+已确认 **4 个平台的 `whoami` 会在实际已登录时误报** `AUTH_REQUIRED`
+（linux.do / 小红书 / 脉脉 / 一亩三分地），根因是它们各自吊死在一个脆弱的单点锚点上。
 
-**只读命令**：
-| 命令 | 用途 |
-|---|---|
-| `whoami` | 当前登录用户 |
-| `hot` | 知乎热榜 |
-| `search <query>` | 搜索 |
-| `question <id>` | 问题详情 |
-| `answer <id>` | 回答 |
-| `answer-detail <id>` | 单个回答完整内容 |
-| `answer-comments <id>` | 回答评论列表 |
-| `user <id>` | 用户信息 |
-| `user-answers <user>` | 用户回答列表 |
-| `user-articles <user>` | 用户文章列表 |
-| `collection <id>` | 收藏夹内容（需登录） |
-| `collections` | 收藏夹列表（需登录） |
-| `recommend` | 推荐 |
-| `pins` | 想法 |
-| `download` | 导出文章为 Markdown |
-
-**注意事项**：
-- 深度长文分析质量高，适合"如何评价XX""XX原理"类内容
-- `answer-detail` 可获取完整回答正文
+→ **用最轻的数据命令探活**，判据与阶梯见 [channel-probing.md](channel-probing.md) §二 §三。
 
 ---
 
-### 4. 掘金（juejin）
+## 三、尚无独立卡的渠道（明细暂留此处）
 
-**登录**：✅ 可用（无需登录，hot/recommend 公开）
+> 这两个渠道命令面窄、使用频率低，暂未单列卡。
+> 若后续开始常规使用，按"一个渠道一张卡"的规则迁出去。
 
-**只读命令**：
-| 命令 | 用途 |
-|---|---|
-| `hot [--category <分类>]` | 热门文章排行榜，可按分类筛选 |
-| `recommend` | 首页推荐文章流 |
+### 掘金（juejin）
 
-**注意事项**：
-- 命令较少，只有 hot 和 recommend
-- 适合获取中文技术实战教程
-- AI 编程/多智能体垂直领域声量不如 V2EX/Reddit
+**登录**：✅ 可用（无需登录，hot/recommend 为公开内容）
 
----
+| 命令 | 类型 | 用途 |
+|---|---|---|
+| `hot [--category <分类>]` | [read] | 热门文章排行榜，可按分类筛选 |
+| `recommend` | [read] | 首页推荐文章流 |
 
-### 5. GitHub（github）
-
-**登录**：✅ 已登录
-
-**只读命令**：
-| 命令 | 用途 |
-|---|---|
-| `whoami` | 当前登录账号 |
-
-**注意事项**：
-- 适配器命令较少（只有 login 和 whoami）
-- 发现项目用 `github-trending` 适配器（见 adapter-public-api.md）
-- `github-trending` 支持每日/每周/每月热门，可按语言筛选
+**渠道职能**：中文技术实战教程。
+**边界**：只有 hot / recommend，**无搜索**；AI 编程/多智能体垂直领域声量不如 V2EX / Reddit。
 
 ---
 
-### 6. Reddit（reddit）
+### linux.do（linux-do）
 
-**登录**：✅ 已登录（2021 年注册的老账号，Total Karma: 1）
+**登录**：✅ 已登录（页面显示"我的帖子""我的消息"，`feed` 正常返回数据）
 
-**只读命令**：
-| 命令 | 用途 |
-|---|---|
-| `whoami` | 当前登录用户（含 Karma、注册时间等） |
-| `hot` | 热门帖子 |
-| `frontpage` | 首页 / r/all |
-| `popular` | /r/popular |
-| `home` | 个性化首页（Best，需登录） |
-| `search <query>` | 搜索帖子 |
-| `subreddit <name>` | 指定子版帖子 |
-| `subreddit-info <name>` | 子版元数据（订阅数、描述、创建日期） |
-| `read <post-id>` | 读取帖子和评论 |
-| `user <username>` | 用户信息 |
-| `user-posts <username>` | 用户发帖 |
-| `user-comments <username>` | 用户评论 |
-| `saved` | 已保存的帖子（需登录） |
-| `subscribed` | 已订阅的子版（需登录） |
-| `upvoted` | 已赞的帖子（需登录） |
+⚠️ **已知 bug**：`whoami` 误报 `AUTH_REQUIRED`——它读页面 meta 标签 `current-user-username`，
+而 linux.do 当前页面没有该标签。**不影响核心功能**，用 `feed`/`search`/`topic` 验登录态即可。
+（这是 §二 那四个误报案例之一）
 
-**高价值子版推荐**：
-- `r/LocalLLaMA` - 本地大模型、AI 编程工具
-- `r/MachineLearning` - 机器学习学术讨论
-- `r/programming` - 编程综合
-- `r/cscareerquestions` - 程序员找工/职业
-- `r/artificial` - AI 综合
-- `r/SelfHosted` - 自托管工具
+| 命令 | 类型 | 用途 |
+|---|---|---|
+| `feed [--category <分类>] [--tag <标签>]` | [read] | 话题列表（需登录；支持全站/标签/分类） |
+| `search <query>` | [read] | 搜索 |
+| `topic <id>` | [read] | 帖子首屏摘要和回复 |
+| `topic-content <id>` | [read] | 帖子正文转 Markdown |
+| `categories` / `tags` | [read] | 分类 / 标签列表 |
+| `user-posts <username>` / `user-topics <username>` | [read] | 用户的帖子 / 创建的话题 |
 
-**注意事项**：
-- AI 编程实战经验和海外找工信息质量极高
-- 1050 赞的"Reddit 大神 Tech 找工完全指南"在小红书传播，说明认可度高
+**高价值分类/标签**：`开发调优`、`前沿快讯`、`人工智能`、`资源荟萃`、`原创`、`精华神帖`
+
+**渠道职能**：高端开发者社区，AI 工具讨论质量高。有抽奖/积分等社区机制（噪声来源）。
 
 ---
 
-### 7. V2EX（v2ex）
+## 四、通用调用格式
 
-**登录**：✅ 已登录
-
-**只读命令**：
-| 命令 | 用途 |
-|---|---|
-| `whoami` | 当前登录账号 |
-| `me` | 个人资料（余额/未读提醒） |
-| `hot` | 热门话题 |
-| `latest` | 最新话题 |
-| `topic <id>` | 主题详情和回复 |
-| `replies <id>` | 主题回复列表 |
-| `node <name>` | 节点话题列表 |
-| `nodes` | 所有节点列表 |
-| `member <username>` | 用户资料 |
-| `user <username>` | 用户发帖列表 |
-| `notifications` | 提醒（回复/@） |
-
-**高价值节点推荐**：
-- `programmer` - 程序员综合
-- `share` - 分享创造
-- `work` - 工作
-- `devops` - DevOps
-- `python` / `nodejs` / `golang` - 各语言
-- `ai` - AI 相关
-- `career` - 职业发展
-
-**注意事项**：
-- 国内程序员一手实践讨论最真实的地方，无种草感
-- Vibe Coding、AI 编程等话题经常从 V2EX 发酵到小红书
-- 浏览体验被吐槽（321 赞的"大家是怎么忍受 V2EX 的浏览体验的"）
-
----
-
-### 8. linux.do（linux-do）
-
-**登录**：✅ 已登录（页面显示"我的帖子""我的消息"，feed 正常返回数据）
-
-**已知 bug**：`whoami` 命令误报 `AUTH_REQUIRED`，因为它读的是页面 meta 标签 `current-user-username`，但 linux.do 当前页面没有这个标签。**不影响核心功能使用**。
-
-**只读命令**：
-| 命令 | 用途 |
-|---|---|
-| `feed [--category <分类>] [--tag <标签>]` | 话题列表（需登录；支持全站、标签、分类） |
-| `search <query>` | 搜索 |
-| `topic <id>` | 帖子首页摘要和回复（首屏） |
-| `topic-content <id>` | 获取帖子正文为 Markdown |
-| `categories` | 分类列表 |
-| `tags` | 标签列表 |
-| `user-posts <username>` | 用户的帖子 |
-| `user-topics <username>` | 用户创建的话题 |
-
-**高价值分类/标签**：
-- `开发调优` - 开发技术
-- `前沿快讯` - 科技新闻
-- `人工智能` - AI 相关
-- `资源荟萃` - 资源分享
-- `原创` - 原创内容
-- `精华神帖` - 高质量帖子
-
-**注意事项**：
-- 高端开发者社区，AI 工具讨论质量高
-- 有抽奖、积分等社区机制
-- whoami 误报 bug，用 feed/search/topic 命令验证登录状态即可
-
----
-
-## 通用调用格式
-
-所有命令统一格式：
 ```bash
 opencli --profile v6pz9gjx <adapter> <command> [args] [options] -f json
 ```
 
-若已设置环境变量：
+已设环境变量时可省略 `--profile` / `--window`：
+
 ```powershell
 $env:OPENCLI_PROFILE="v6pz9gjx"
 $env:OPENCLI_WINDOW="background"
 ```
-则可省略 `--profile` 和 `--window`：
-```bash
-opencli <adapter> <command> [args] -f json
-```
 
-## 验证记录
+⚠️ `--window` / `--site-session` / `-f` 都是**子命令级**参数，必须跟在命令后面
+（放全局位置报 `unknown option`，见 [pitfalls.md](pitfalls.md) §17）。
 
-- 2026-08-27：在 v6pz9gjx profile 中验证 8 个平台登录状态
-- 7/8 可用（BOSS 直聘暂时搁置）
-- linux.do whoami 误报 bug 已确认，不影响核心功能
+---
+
+## 五、验证记录
+
+| 日期 | 记录 |
+|---|---|
+| 2026-08-27 | 在 v6pz9gjx profile 中验证 8 个平台登录状态，7/8 可用（BOSS 搁置）；linux.do whoami 误报 bug 确认 |
+| 2026-09-17 | L0 复核 reddit / v2ex / bilibili / github / nowcoder 命令清单；本文件改为登录态总表 + 卡索引，命令明细迁往各卡 |
+
+---
+
+*本文件最后更新：2026-09-17*
