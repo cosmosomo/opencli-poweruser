@@ -14,6 +14,8 @@ description: >-
 必加参数、踩坑经验都沉淀在 references/ 中，调用前查阅对应文件即可避免重复踩坑。**
 
 ## 本 skill 的定位与独特价值
+> ⚠ **多智能体并发必读**：调用任何 OpenCLI 适配器前，先读 `local/channel-state/BOARD.md` 状态板（🟢/🟡/🔴/🔒 一屏可见），占锁→用完写回→限频即冷却，三步协议见 [references/channel-probing.md §六](references/channel-probing.md)。同机多智能体共用账号，不读状态板就调用=可能打死账号。
+
 
 > **使用者视角，不是作者视角。** 官方 `opencli-adapter-author` skill 教你怎么为新站点写适配器（12 步 Runbook + 6 种 Strategy 契约模型）；本 skill 教你怎么用已有适配器做**跨平台调研、数据采集、工作流编排**。
 >
@@ -144,6 +146,7 @@ with open('result.json', 'r', encoding='utf-8-sig') as f:
 | `hackernews` / `arxiv` / `wttr` 等 | 公开 API | ✅ 可用 | 无需浏览器 | [adapter-public-api.md](references/adapter-public-api.md) |
 | `doubao` / `chatgpt` / `claude` | AI 工具 | ⚠️ 部分可用 | ChatGPT 因 UI 改版选择器失效 | 见 pitfalls.md |
 | `antigravity` | AntiGravity（桌面应用） | ✅ CDP 已打通 | **必须以 `--remote-debugging-port=9234` 启动**；31 命令 12✅/6⚠️/14❌；⚠️ **send 可能假成功**（整页刷新后/agent忙碌时不落盘），必须用 transcript 验证；read/history/new/extract-code 选择器过期（真实 testid 已确认可修复）；5 条 Windows 路径 bug；⚠️ `model "Pro"` 会误中 "Projects" 菜单；**子智能体架构已破解**（独立 conversationId + 文件消息总线，用 ag_list_subagents.ps1）；读回复用 `ag_read_transcript.ps1`，代码用 `copy-code`；跳转 `ag_goto.ps1`，列会话 `ag_list.ps1`；**额度查询 `ag_quota.ps1`**（5小时+周配额，CDP导航Models页解析） | [adapter-antigravity.md](references/adapter-antigravity.md) |
+| `zcode` | ZCode（桌面应用） | ✅ **磁盘直读 4 命令已实测** / CDP 待窗口实测 | **自建适配器**（~/.opencli/clis/zcode/），端口 **9240**（避开内置 9235 trae-solo）；`list` 列会话 / `tasks` 列自动化 / `subagents` 列子智能体 / `read-transcript` 读 rollout，**磁盘直读不碰进程随时可用**；`status/send/new/open` 需 ZCode 以 `--remote-debugging-port=9240` 启动；**ZCode 常驻每小时自动化+多子智能体，操作进程前必读 [desktop-app-safety-sop.md](references/desktop-app-safety-sop.md)**（勘察→记录→受控重启→核对恢复）；ZCode CLI headless / app-server stdio / 凭证复用均验证做不通 | [adapter-zcode.md](references/adapter-zcode.md) |
 
 ## 本机专属环境（仓库根 LOCAL.md）
 
@@ -172,7 +175,7 @@ with open('result.json', 'r', encoding='utf-8-sig') as f:
 |---|---|
 | [verified-platforms.md](references/verified-platforms.md) | **登录态总表 + 卡索引**（哪个渠道在哪张卡）。命令清单已迁往各 `adapter-*.md`；仅掘金/linux.do 明细暂留此处 |
 | [job-platforms.md](references/job-platforms.md) | **求职/招聘采集前必读**：8 个求职适配器状态矩阵、字段可信度、BOSS 禁区、按能力词反查公司 |
-| `adapter-*.md` —— **一个渠道一张卡**：[xiaohongshu](references/adapter-xiaohongshu.md) / [zhihu](references/adapter-zhihu.md) / [reddit](references/adapter-reddit.md) / [v2ex](references/adapter-v2ex.md) / [bilibili](references/adapter-bilibili.md) / [github](references/adapter-github.md) / [maimai](references/adapter-maimai.md) / [antigravity](references/adapter-antigravity.md) / [huodongxing](references/adapter-huodongxing.md) / [boss](references/adapter-boss.md) / [public-api](references/adapter-public-api.md)（聚合公开 API 类） | 动手用某个具体适配器之前，先读它的卡：命令清单 / 输出结构 / 踩坑 / 渠道职能都在里面。**卡会过期——先跑 30 秒复核**（[channel-probing.md](references/channel-probing.md) §七）。牛客的卡在 [job-platforms.md](references/job-platforms.md) §四，未单列 |
+| `adapter-*.md` —— **一个渠道一张卡**：[xiaohongshu](references/adapter-xiaohongshu.md) / [zhihu](references/adapter-zhihu.md) / [reddit](references/adapter-reddit.md) / [v2ex](references/adapter-v2ex.md) / [bilibili](references/adapter-bilibili.md) / [github](references/adapter-github.md) / [maimai](references/adapter-maimai.md) / [antigravity](references/adapter-antigravity.md) / [huodongxing](references/adapter-huodongxing.md) / [zcode](references/adapter-zcode.md) / [boss](references/adapter-boss.md) / [public-api](references/adapter-public-api.md)（聚合公开 API 类） | 动手用某个具体适配器之前，先读它的卡：命令清单 / 输出结构 / 踩坑 / 渠道职能都在里面。**卡会过期——先跑 30 秒复核**（[channel-probing.md](references/channel-probing.md) §七）。牛客的卡在 [job-platforms.md](references/job-platforms.md) §四，未单列 |
 
 ### 第二层 · 通道层「怎么把一个渠道跑通」
 
@@ -199,6 +202,7 @@ with open('result.json', 'r', encoding='utf-8-sig') as f:
 | 文件 | 何时读 |
 |---|---|
 | [bilibili-asr-workflow.md](references/bilibili-asr-workflow.md) | B站视频 → 字幕（yt-dlp + faster-whisper） |
+| [desktop-app-safety-sop.md](references/desktop-app-safety-sop.md) | **操作桌面 AI 应用（ZCode/AntiGravity）进程前必读**：勘察→记录→受控重启→恢复→验证→汇报闭环 |
 | [adapters/README.md](adapters/README.md) | 本 skill 自建的适配器源码与安装方法（换机器时复制启用） |
 | [multi-agent-sync.md](references/multi-agent-sync.md) | 本机多个智能体各持一份副本时：版本收敛、新特性回灌、冲突的语义并集合并（副本真实清单见 [LOCAL.md](LOCAL.md)） |
 

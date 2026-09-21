@@ -236,3 +236,55 @@ opencli <adapter> <cmd> --help -f yaml   # ③ 单命令的参数、Output colum
 ---
 
 *本文件最后更新：2026-09-17（首次建立，证据来自 51job/牛客/LinkedIn/Indeed/一亩三分地/脉脉 六平台同日实测）*
+
+---
+
+## 六、运行时渠道状态板（channel-state/）· 2026-09-23 建立（同日经用户裁决从 json 重构为 md 文件夹）
+
+> **多智能体共用 OpenCLI 的核心协调机制。** 任何宿主的任何智能体在调用 OpenCLI 适配器前后，都要读写 `local/channel-state/` 状态板。
+> 为什么是 md 文件夹不是 json：①json 全量读改写在并发下互相覆盖（本 skill 项目实测两次事故）②状态要给人看 ③使用者是 LLM——读 md 理解更强、写 md 出错率远低于写合法 json。
+
+### 6.1 目录结构
+
+```
+local/channel-state/
+├── BOARD.md              # 总板：每渠道一行（状态/持有者/下次可用）——人和 agent 打开秒懂
+├── channels/
+│   ├── 51job-search.md   # 每渠道一个文件：当前状态+安全参数表+特性备注+近期记录
+│   ├── 51job-detail.md   #   ↳ 不同 agent 写不同渠道文件 → 天然不冲突，写坏一个不殃及其他
+│   └── ...
+└── events.log            # append-only 事件流水：只追加永不覆盖——完整历史天然保留
+```
+
+### 6.2 三步协议（所有智能体强制）
+
+1. **调用前读**：打开 `BOARD.md` 看目标渠道行——🔴/🔒 不碰；🟡 看"下次可用"；🟢 且"持有者"为空 → 在 BOARD.md 该行写持有者（`<宿主>-<agent标识>`）占锁，并读 `channels/<渠道>.md` 核对安全参数
+2. **用完写回**：清 BOARD.md 持有者；在 `channels/<渠道>.md` 末尾追加近期记录一行；重要事件追加 `events.log`
+3. **遇限频升级**：按渠道文件的安全参数判定限频信号 → 连续 2 次 → BOARD.md 改 🟡 + 写"下次可用"（now+冷却时长）→ **立即停手换路，绝不硬刷**（用户 2026-09-23 明确：不要疯狂重试导致账号出问题）
+
+### 6.3 锁规则
+
+- 同一渠道同一时刻**只允许一个持有者**
+- 特例：`51job-search` 允许多 agent 并行但各保持 interval_s 间隔（锁粒度=批次）
+- `51job-detail` **全局串行**——任何时刻一个
+- 锁悬挂（>30 分钟未释放）视为持有者已死：可抢占，但必须在 events.log 记录抢占事件
+
+### 6.4 状态迁移
+
+```
+🟢 ok ──连续2次限频──> 🟡 cooldown ──到点试针成功──> 🟢
+ │                        └──试针仍限频──> 🟡（冷却时长翻倍）
+ ├──账号级封禁──> 🔴 blocked_permanent（boss：自动化不可绕，仅快照）
+ └──登录墙结构性关闭──> 🔒 blocked_login（maimai/xiaohongshu：需用户登录态，升级给用户不催促）
+```
+
+### 6.5 与项目级状态板的分工
+
+| 板 | 管什么 | 位置 |
+|---|---|---|
+| **本板** | OpenCLI 适配器（51job/boss/maimai/xiaohongshu/...） | skill `local/channel-state/` |
+| 项目板 | 非 OpenCLI 通道（猎聘 curl/国聘/OPPO/华为/gaoxiaojob/...） | Jobs 项目 `09_招聘追踪/scripts/data/` |
+
+### 6.6 新渠道加入时
+
+探测定级（本文件 §〇 五步）完成后：建 `channels/<新渠道>.md`（用现有文件为模板）+ BOARD.md 加一行 + events.log 记一条。**新渠道文件必须当天建**，否则下一个 agent 无参数可查。

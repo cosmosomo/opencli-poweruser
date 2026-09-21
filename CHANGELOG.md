@@ -1,4 +1,4 @@
-# 进化日志
+﻿# 进化日志
 
 > 本 skill 每次能力变更/经验沉淀的时间线。**只追加，不改写。**
 >
@@ -209,3 +209,22 @@
 
 **自查教训**：我在同一天先写下"渠道的议题职能判断不进 skill"，然后在四张新卡里各写了一遍议题职能。
 规则写进 EVOLUTION 还不够，**必须同时写进产出物的模板**——否则规则和产出是两条不相交的路径。
+### 2026-09-22 ZCode 适配器构建 + 桌面应用受控操作 SOP（真实场景避慌协议）
+- 🆕 **新建自建适配器 `zcode`**（`~/.opencli/clis/zcode/`，8 命令）：
+  - 磁盘直读 4 条（**已实测通过**）：`list`（会话，tasks-index.sqlite tasks 表）/ `tasks`（自动化 automations+automation_runs）/ `subagents`（子智能体 metadata.json，含任务书摘要/状态/活跃度）/ `read-transcript`（rollout model-io-*.jsonl）
+  - CDP 交互 4 条（代码就绪，待 ZCode 带 9240 端口窗口实测）：`status` / `send`（contenteditable+Enter）/ `new`（Ctrl+N）/ `open`（task-item 点击）
+  - 端口 **9240**（`~/.opencli/apps.yaml` 注册；避开内置 9235 trae-solo）
+  - 关键技术：`node:sqlite` readOnly 打开（Windows 无 sqlite3 CLI）；LOCAL strategy（`browser:false`，func 拿 args 不拿 page）
+- 🆕 **新建 [references/desktop-app-safety-sop.md](references/desktop-app-safety-sop.md)**：桌面 AI 应用受控操作六步闭环
+  （勘察→记录→受控操作→恢复→验证→汇报）、Electron 单实例陷阱（Start-Process 吞参数→必须 ProcessStartInfo）、
+  自动化自恢复原则（ZCode 每小时轮询重派中断子智能体，任务书内置「前次静默退出零产物——你是重跑」）。
+  **本 SOP 是本轮实战的直接产物**：曾因盲目杀 ZCode 中断用户生产任务（4 个 running 子智能体），被用户严正纠正后沉淀。
+- 🎯 **最高理念：断掉之后要续跑**（用户原话：「断掉之后要续跑要作为基本理念哦」）——
+  已写入 SOP 第〇节：操作前必须能回答「断了谁来续/续跑证据/怎么证明续上」；
+  续跑三机制（自动化自恢复 > 任务书重跑 > 人工手动恢复）；反面教材 = 2026-09-22 盲杀进程中断 4 子智能体。
+- 🆕 **新建 [references/adapter-zcode.md](references/adapter-zcode.md)**：ZCode 数据层地图（tasks-index.sqlite 表结构、
+  agents/rollout 路径）、已验证做不通清单（CLI headless / app-server stdio / 凭证复用 / 智谱 API 429）、
+  与 AntiGravity 适配器异同对照
+- ✅ SKILL.md：速查表加 `zcode` 行、文档导航加 adapter-zcode.md + desktop-app-safety-sop.md
+- 📌 实战洞察：**ZCode 是自恢复系统**——每小时自动化轮询会自动重派被中断的子智能体，
+  操作进程后只需确认 automation active + next_run 正常 + 主会话 rollout 继续写，不必手工恢复
