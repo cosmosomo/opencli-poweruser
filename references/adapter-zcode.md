@@ -51,7 +51,7 @@ opencli zcode status -f json
 |---|---|---|---|
 | `list` | 列 ZCode 会话 | `~/.zcode/v2/tasks-index.sqlite` → `tasks` 表 | `opencli zcode list --status running` |
 | `tasks` | 列自动化任务+最近运行 | `automations` + `automation_runs` 表 | `opencli zcode tasks` |
-| `subagents` | 列父会话子智能体 | `~/.zcode/cli/agents/<父会话>/*/metadata.json` | `opencli zcode subagents <sess> --active running` |
+| `subagents` | 列父会话子智能体（**含真实活跃判定**） | `~/.zcode/cli/agents/<父会话>/*/metadata.json` + `cli/rollout/` | `opencli zcode subagents <sess> --alive` |
 | `read-transcript` | 读会话 rollout 最近内容 | `~/.zcode/cli/rollout/model-io-<sess>.jsonl` | `opencli zcode read-transcript <sess> --last 5` |
 
 ### ⏳ CDP 交互类（需 9240 端口，代码已就绪待实测）
@@ -73,8 +73,19 @@ opencli zcode status -f json
 | 自动化 | 同库 → `automations` | enabled/running/run_count/next_run_at/last_error |
 | 运行历史 | 同库 → `automation_runs`（409 行） | 每次触发的结果/outcome |
 | 子智能体 | `%USERPROFILE%\.zcode\cli\agents\<父会话>\agent_*\metadata.json` | 任务书(prompt)/状态/创建时间/parent |
-| 模型日志 | `%USERPROFILE%\.zcode\cli\rollout\model-io-*.jsonl` | 活跃度判断（mtime）/ 请求明细 |
+| 模型日志 | `%USERPROFILE%\.zcode\cli\rollout\model-io-*.jsonl` | **真实活跃度金标准**（见下方 ⚠️） |
 | 凭证 | `~/.zcode/v2/credentials.json`（enc:v1 加密态） | **外部不可复用**（已验证 401） |
+
+**⚠️⚠️ 子智能体活跃判定（2026-09-22 血泪修正，务必遵守）**：
+
+`metadata.json` 的 **`status` 字段不可信**——异常中断的 agent 会**永远停在 `running`**（实测 8 个僵尸：updatedAt 停在创建时刻、无 rollout 文件）。正常完成才会更新为 `completed`/`failed`。
+
+**唯一可信的活跃判定 = rollout 日志文件 mtime**：
+- 运行中的子智能体会持续写 `cli\rollout\model-io-sess_subagent_agent_<id>.jsonl`（实测几秒一写）
+- 僵尸 agent 该文件**不存在**
+- 命令：`opencli zcode subagents <sess> --alive`（默认 30 分钟窗口）→ 只返回真在跑的
+
+**教训**：监控并发/活跃度时**永远不要用 `--active running`**（status 过滤）——它会数出 10 个"running"但真实并发只有 2-3 个。必须用 `--alive`（rollout mtime 过滤）。
 
 **sqlite 读取**：适配器用 `node:sqlite` 的 `DatabaseSync(DB, { readOnly: true })`（Windows 无 /usr/bin/sqlite3）。
 
@@ -118,8 +129,10 @@ opencli zcode list -f json
 # 2. 看自动化在跑什么
 opencli zcode tasks -f json
 
-# 3. 看某会话派了哪些子智能体、是否在跑
-opencli zcode subagents sess_92f8c7e2-d860-4409-b6d2-a4df71cdddee --active running -f json
+# 3. 看某会话派了哪些子智能体、是否真的在跑（**用 --alive，勿用 --active running**）
+opencli zcode subagents sess_92f8c7e2-d860-4409-b6d2-a4df71cdddee --alive -f json
+# 或看全量（含僵尸标记 alive=N）
+opencli zcode subagents sess_92f8c7e2-d860-4409-b6d2-a4df71cdddee -f json
 
 # 4. 读会话最近进展（含子智能体日志）
 opencli zcode read-transcript sess_92f8c7e2-d860-4409-b6d2-a4df71cdddee --last 5
@@ -144,4 +157,4 @@ opencli zcode status -f json
 
 ---
 
-*本文件最后更新：2026-09-22（zcode 适配器首版沉淀）*
+*本文件最后更新：2026-09-22（zcode 适配器首版沉淀 + **活跃判定血泪修正：status 不可信，rollout mtime 才是金标准**）*

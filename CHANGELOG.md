@@ -228,3 +228,17 @@
 - ✅ SKILL.md：速查表加 `zcode` 行、文档导航加 adapter-zcode.md + desktop-app-safety-sop.md
 - 📌 实战洞察：**ZCode 是自恢复系统**——每小时自动化轮询会自动重派被中断的子智能体，
   操作进程后只需确认 automation active + next_run 正常 + 主会话 rollout 继续写，不必手工恢复
+
+### 2026-09-22（2）ZCode 并发监控口径血泪修正：status 不可信，rollout mtime 才是金标准
+- 🔴 **纠正原则性错误**：`subagents --active running` 按 `metadata.status` 过滤统计"并发"完全不可靠——
+  实测 `status=running` 的 10 个里 **8 个是僵尸**（异常中断的 agent 状态永远停在 running，updatedAt 停在创建时刻，无 rollout 文件），
+  真实并发只有 **2-3 个**（rollout 日志持续写入的）
+- ✅ **修正 subagents.js**（`~/.opencli/clis/zcode/subagents.js` + skill 副本 `adapters/zcode/subagents.js`）：
+  - 新增 `--alive` / `--alive-minutes`（默认 30）：只返回 rollout 日志 mtime 在窗口内有写入的子智能体 = **真在跑**
+  - 输出新增 `alive`（Y/N）+ `lastRollout` 列；rollout 文件名 = `model-io-sess_subagent_` + agentId（注意前缀无重复 `agent_`）
+  - 修复排序 bug：原 `b._ageMin - a._ageMin` 最旧在前，改为升序（最新活跃在前）
+  - `--minutes` 过滤也从目录 mtime 改为取 rollout/dir 两者较新
+- ✅ **5 个并发监控定时任务全部改口径**：`--active running` → `--alive`（9点前 :00/:20/:40 + 9点后奇/偶点）
+- ✅ adapter-zcode.md 新增「⚠️⚠️ 子智能体活跃判定」章节 + 命令矩阵/快速上手示例全部换 `--alive`
+- 📌 **教训**：监控"在跑"永远不要用 metadata 状态字段，桌面应用要数活跃必须找「运行期持续写入的日志文件」；
+  顺带暴露原 subagents 示例本身也是错误示范（`--active running`），已一并改正
