@@ -34,7 +34,7 @@ description: >-
 > 新用户首次使用本 skill 前，必须先完成 OpenCLI 安装、浏览器扩展配置和网站登录。
 > 完整步骤见 [SETUP.md](SETUP.md)：Node.js 前置要求、npm / 桌面应用两种安装方式、Chrome 扩展安装、daemon 验证、多 profile 管理、环境变量配置、智能体操作指南。
 >
-> **本文件中的 `v6pz9gjx` 是本机 Browser Bridge profile ID（私有仓库包含本机配置，clone 后立即可用）。** 本机详细配置见 [LOCAL.md](LOCAL.md)。
+> **本文件中的 `v6pz9gjx` 是作者本机的示例 profile ID，外部用户请按 SETUP.md 换成你自己的。** 本机详细配置请自建：复制 local/LOCAL.md.example 为 LOCAL.md 填写（LOCAL.md 已在 .gitignore，不会被提交）。
 
 ## 前置检查（每次任务第一步）
 
