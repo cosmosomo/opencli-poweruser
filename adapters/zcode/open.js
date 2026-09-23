@@ -9,7 +9,7 @@ cli({
     name: 'open',
     access: 'write',
     description: '[write] 打开 ZCode 指定会话（点击侧边栏 task-item-<id>）',
-    example: 'opencli zcode open sess_92f8c7e2-d860-4409-b6d2-a4df71cdddee',
+    example: 'opencli zcode open sess_xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx',
     domain: 'localhost',
     strategy: Strategy.UI,
     browser: true,

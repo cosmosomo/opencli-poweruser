@@ -242,3 +242,19 @@
 - ✅ adapter-zcode.md 新增「⚠️⚠️ 子智能体活跃判定」章节 + 命令矩阵/快速上手示例全部换 `--alive`
 - 📌 **教训**：监控"在跑"永远不要用 metadata 状态字段，桌面应用要数活跃必须找「运行期持续写入的日志文件」；
   顺带暴露原 subagents 示例本身也是错误示范（`--active running`），已一并改正
+
+### 2026-09-23（3）ZCode 3.14.3 DWF 架构实测修正：rollout 金标准分流 + 9240 修复链路 + 提醒文件闭环
+- 🔴 **纠正写死的金标准**（2026-09-22 版假设部分失效）：主会话**不写** `rollout/model-io-sess_<id>.jsonl`——
+  轨迹在 `cli\log\zcode-<date>.jsonl`（每日滚动、每行带 sessionId）；3.14.3 多智能体改走 **DWF（workflow_child）**：
+  `cli\db\db.sqlite` 的 `dwf_run`/`dwf_actor` 表 + rollout `model-io-sess_dwf-dwfrun-<runId>-actor_<n>_<m>.jsonl`
+- ✅ **subagents.js 升级双形态**（skill 副本 + ~/.opencli/clis/zcode 运行本体同步）：旧式 agents 目录 + DWF db 表合并列出，
+  rollout 通用规则 `model-io-<childSessionId>.jsonl` 判活跃；新增 `kind` 列（subagent/dwf）；**终态排除**（completed/failed/cancelled
+  最近有写入也不算 alive，收尾写入不计并发）；修 dwf 时间戳单位 bug（ms 勿 ×1000）
+- ✅ **read-transcript.js 加主会话 log 回退**：rollout 找不到时读今日 `cli/log/zcode-<date>.jsonl` 按 sessionId 过滤尾部
+- ✅ **实测**：sess_xxxxxx 列出运行中 DWF run「示例自动化任务」的 4 actors（2 alive）；sess_xxxxxx 旧式子智能体
+  「智联城市类目页批五」alive=Y；主会话 read-transcript 走 log 回退正常
+- 🔴 **提醒文件闭环验证**：`__ZCode并发提醒.md` 无人消费——automations.prompt 全文 6214 字不含读该文件指令；
+  沉淀规则：写给 ZCode 看的文件必须先查任务书，同步走覆盖地图认领行/状态指针
+- ✅ **9240 修复链路沉淀**（adapter-zcode.md §三·补 + desktop-app-safety-sop.md 教训表）：假死特征诊断清单
+  （LISTENING 但 HTTP 超时 + CPU 秒级 + 截图空白）；根因①3.14.3 待装更新阻塞→清残留+静默装更新+重启；
+  根因②DWM 故障（系统级，需系统重启）；触发延迟现实（三相位叠加晚 5-30 分钟）

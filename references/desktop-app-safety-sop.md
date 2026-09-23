@@ -53,15 +53,17 @@
 - ZCode：读 `%USERPROFILE%\.zcode\v2\tasks-index.sqlite` 的 `automations` 表（enabled/running/next_run_at）与 `automation_runs` 表（最近运行记录）
 - 关键字段：`automation_id`、`enabled`、`running`、`run_count`、`last_run_at`、`next_run_at`、`lifecycle_status`、`last_error`
 
-**② 有几个子智能体在跑？各自什么任务？**
-- ZCode：扫描 `%USERPROFILE%\.zcode\cli\agents\<父会话id>\agent_*\metadata.json`
+**② 有几个子智能体在跑？各自什么任务？**（2026-09-23 修正：3.14.3 双形态）
+- ZCode 旧式：扫描 `%USERPROFILE%\.zcode\cli\agents\<父会话id>\agent_*\metadata.json`
+- ZCode 3.14.3+ DWF：`cli\db\db.sqlite` → `dwf_run`（parent_session_id=父会话）+ `dwf_actor`（actor 名/session_id）——**当前活跃多智能体基本全走此形态**
 - 每个子智能体的 `prompt` 字段 = 完整任务书（任务目标+名单+方法+写入边界），`status` = 当前状态
-- **子智能体活跃度判断**：目录 mtime（metadata.json 最后写入时间）+ rollout 日志
-  - `%USERPROFILE%\.zcode\cli\rollout\model-io-sess_subagent_agent_*.jsonl` 的 mtime 近 30 分钟 = 活跃
-  - mtime 停在杀进程时刻 = 被中断
+- **子智能体活跃度判断**：目录 mtime（metadata.json 最后写入时间）+ 对应 rollout 日志 mtime
+  - 旧式：`cli\rollout\model-io-sess_subagent_agent_*.jsonl` mtime 近 30 分钟 = 活跃
+  - DWF：`cli\rollout\model-io-sess_dwf-dwfrun-<runId>-actor_<n>_<m>.jsonl` mtime 近 30 分钟 = 活跃
+  - mtime 停在杀进程时刻 = 被中断；**完成/失败后 ZCode 会清理 rollout 文件**（文件消失=该 actor 已结束）
 
 **③ 主会话当前在推进什么？**
-- 主会话 rollout：`model-io-sess_<会话id>.jsonl`（mtime 近几分钟 = 主线程活着）
+- 主会话活跃看 `cli\log\zcode-<日期>.jsonl`（**主会话不写 rollout！** 每日滚动日志 mtime 近几分钟 = 主线程活着）
 - 自动化下一轮触发时间 = 自恢复窗口（ZCode 每小时自动重派发）
 
 **勘察代码**：参考 `opencli-poweruser` 实战沉淀的勘察脚本模式（只读 sqlite + 扫 agents 目录 + rollout mtime），不要用全盘搜索。
@@ -104,7 +106,7 @@ $psi.UseShellExecute = $false
 
 **恢复 = 验证续跑真的发生**，不是"看着正常"：
 1. 自动化是否还 active、`next_run_at` 是否正常推进（读 automations 表）
-2. 主会话 rollout 是否继续写入（mtime 是否更新）→ 主线程活着 = 续跑管道通
+2. 主会话是否继续写入（`cli\log\zcode-<date>.jsonl` 或 rollout mtime 更新）→ 主线程活着 = 续跑管道通
 3. 被中断的子智能体：automation 下一轮是否会重派发（ZCode 任务书内置「前次同任务静默退出零产物——你是重跑」）
 4. 不必手工逐个子智能体恢复——**自动化轮询是自恢复机制**，只确认它活着
 5. **核对基线清单**：勘察时记录的每个子智能体任务，重启后逐条确认「已重派 / 待下轮 / 需人工续」，不遗漏
@@ -126,12 +128,16 @@ $psi.UseShellExecute = $false
 | 教训 | 说明 |
 |---|---|
 | **断掉之后要续跑（最高理念）** | 一切操作以「断了怎么续」为前提；没有续跑方案 = 破坏性操作，不许动手 |
-| **先勘察后动手** | 任何杀进程前，必须读 automations 表 + agents 目录 + rollout，否则就是盲杀 |
+| **先勘察后动手** | 任何杀进程前，必须读 automations 表 + agents 目录 + rollout/log，否则就是盲杀 |
 | **别用 Start-Process 传参** | Electron 单实例锁会吞参数，用 ProcessStartInfo 或先杀干净再启动 |
 | **杀进程必留基线** | 子智能体清单、自动化 next_run、主会话活跃度，全部记录后才能重启；**这份记录就是续跑的依据** |
 | **自动化是自恢复的** | ZCode 每小时轮询会自动重派发被中断的子智能体（任务书内置重跑机制），确认自动化活着即可 |
 | **用户在工作时别碰进程** | 若用户明确在用（"我正在工作呢"），优先写只读命令+文档，CDP 实测等用户方便时受控重启 |
 | **磁盘直读永远安全** | list/subagents/tasks/read 这类只读 `.zcode` 数据的命令不碰进程，可随时开发+测试 |
+| **端口 LISTENING ≠ CDP 可用** | 9240 监听但 curl /json/version 超时 = 主进程 UI 线程卡死（DevTools 跑在主进程事件循环上），app-server 独立进程正常会误导判断 |
+| **卡死先查系统层** | ZCode 假死 + 截图空白 + 弹「DWM 故障」= Windows 桌面会话问题（需系统重启），不是应用问题；先点掉弹窗确认桌面恢复 |
+| **更新待装会阻塞启动** | 3.14.3 更新包下载完后，启动停在「确认安装更新」模态 → 自动化引擎/CDP 全不起来；静默装完更新再重启 |
+| **版本升级后必须重实测** | 3.14.1→3.14.3 多智能体改 DWF 架构，rollout 文件名/登记位置全变了；写死的路径会静默失效，升级后先 ls 实测再信文档 |
 
 ---
 
@@ -140,8 +146,9 @@ $psi.UseShellExecute = $false
 ### ZCode（端口 9240）
 - 数据根：`%USERPROFILE%\.zcode\`
 - 自动化表：`v2\tasks-index.sqlite` → `automations` / `automation_runs`
-- 子智能体：`cli\agents\<父会话>\agent_*\metadata.json`
-- rollout：`cli\rollout\model-io-*.jsonl`
+- 子智能体（旧式）：`cli\agents\<父会话>\agent_*\metadata.json`
+- 子智能体（3.14.3+ DWF）：`cli\db\db.sqlite` → `dwf_run` / `dwf_actor`
+- 活跃日志：`cli\rollout\model-io-*.jsonl`（子智能体/DWF actor）+ `cli\log\zcode-<date>.jsonl`（主会话）
 - 会话索引：`v2\tasks-index.sqlite` → `tasks` 表（workspace/title/status/model）
 - 可执行：`E:\zcode\ZCode.exe`；CLI：`E:\zcode\resources\glm\zcode.cjs`
 
@@ -152,4 +159,4 @@ $psi.UseShellExecute = $false
 
 ---
 
-*本文件最后更新：2026-09-22（ZCode 每小时巡检自动化 + 4 子智能体实战中沉淀）*
+*本文件最后更新：2026-09-23（3.14.3 DWF 双形态活跃判定修正 + 9240 假死特征/DWM 故障/更新阻塞教训沉淀）*

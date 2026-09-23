@@ -517,3 +517,23 @@ BOSS 数据改走**人工单次通道**，**OpenCLI 侧不做任何自动化**�
 1. 在 SKILL.md 的"已验证适配器速查"表中添加一行
 2. 创建 `references/adapter-<name>.md` 记录详细经验
 3. 在本文件进化日志中追加记录
+
+## ZCode 适配器 2026-09-23（3.14.3 DWF 架构实测修正 + 9240 修复链路）
+
+### 1. rollout「金标准」假设失效（血泪：写死的路径会在版本升级后静默失效）
+- 原 skill 写死：主会话活跃 = `cli\rollout\model-io-sess_<id>.jsonl`；子智能体 = `model-io-sess_subagent_agent_<id>.jsonl`
+- 实测（3.14.3）：**主会话根本不写 rollout**（轨迹在 `cli\log\zcode-<date>.jsonl`，每日滚动、每行 JSON 带 sessionId）；
+  活跃多智能体已改走 **DWF（workflow_child）**——登记在 `cli\db\db.sqlite` 的 `dwf_run`/`dwf_actor` 表，
+  rollout 文件名 = `model-io-sess_dwf-dwfrun-<runId>-actor_<n>_<m>.jsonl`
+- 修复：subagents.js 升级为双形态（旧式 agents 目录 + DWF db 表）＋ rollout/log 双源判定＋终态排除；read-transcript 加主会话 log 回退
+- 教训：**版本升级后必须 ls 实测文件格式，再信文档**；通用规则 = rollout 文件名 `model-io-<childSessionId>.jsonl`
+
+### 2. 提醒文件没有消费闭环（单向通道，写了白写）
+- `__ZCode并发提醒.md` 一直在写，但 automations.prompt（任务书全文 6214 字）**不含读提醒文件指令** → 无人消费
+- 规则：写给 ZCode 看的文件必须先查任务书是否含读取指令；同步走任务书内置通道（覆盖地图认领行/状态指针）
+
+### 3. 9240 卡死修复链路
+- 假死特征：端口 LISTENING 但 `curl /json/version` 超时零字节 + 主进程 Responding=False/CPU 秒级 + 截图空白但 GetWindowRect 正常
+  （DevTools server 跑在主进程事件循环，UI 卡死则 CDP 一起卡；app-server 独立进程正常会误导）
+- 根因①：3.14.3 待装更新阻塞（启动停「确认安装更新」模态 → host/app-server 没起来）→ 清理残留+静默装更新+重启
+- 根因②：Windows DWM 故障（弹「会话已注销·DWM 故障」→ GUI 全断）→ 点掉弹窗；反复出现需系统重启
