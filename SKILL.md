@@ -1,4 +1,4 @@
-﻿---
+---
 name: opencli-poweruser
 description: >-
   通过本机已部署的 OpenCLI（@jackwener/opencli，全局安装 v1.8.6+）调用 160+ 网站/桌面应用
